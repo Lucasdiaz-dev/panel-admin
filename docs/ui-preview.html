@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel admin — preview UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #111111;
+        --muted: #8a8a8a;
+        --line: #ececec;
+        --wash: #f3f3f3;
+        --paper: #ffffff;
+        --shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+        --ease: cubic-bezier(0.32, 0.72, 0, 1);
+        --r-sm: 12px;
+        --r-md: 16px;
+        --r-lg: 22px;
+        --r-xl: 28px;
+        --pad: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Outfit, system-ui, sans-serif;
+        background: #f6f6f6;
+        color: var(--ink);
+        min-height: 100dvh;
+      }
+
+      .board {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+
+      .board-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .board-head h1 {
+        font-size: 36px;
+        line-height: 40px;
+        letter-spacing: -0.04em;
+        font-weight: 600;
+        text-wrap: balance;
+      }
+
+      .tokens {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .token {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      .swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+      }
+
+      .phones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        justify-content: center;
+      }
+
+      .phone {
+        width: 320px;
+        background: #0a0a0a;
+        border-radius: 44px;
+        padding: 10px;
+        box-shadow: var(--shadow);
+      }
+
+      .screen {
+        background: var(--paper);
+        border-radius: 34px;
+        overflow: hidden;
+        height: 690px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .status {
+        height: 48px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 0 22px 8px;
+        font-size: 14px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .island {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 96px;
+        height: 28px;
+        background: #0a0a0a;
+        border-radius: 20px;
+      }
+
+      .status-icons {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+
+      .bar {
+        width: 17px;
+        height: 10px;
+        border: 1.5px solid var(--ink);
+        border-radius: 3px;
+        position: relative;
+      }
+
+      .bar::after {
+        content: "";
+        position: absolute;
+        inset: 2px 2px 2px 5px;
+        background: var(--ink);
+        border-radius: 1px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 16px 12px;
+      }
+
+      .nav h2 {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .nav .title-sm {
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        max-width: 168px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--wash);
+        border: 0;
+        display: grid;
+        place-items: center;
+        color: var(--ink);
+        flex-shrink: 0;
+      }
+
+      .body {
+        flex: 1;
+        overflow: hidden;
+        padding: 0 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .search {
+        height: 44px;
+        border-radius: 999px;
+        background: var(--wash);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 16px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .chip {
+        min-width: 68px;
+        height: 68px;
+        border-radius: var(--r-md);
+        background: var(--wash);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--ink);
+        flex: 1;
+      }
+
+      .chip.active {
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      .section-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+      }
+
+      .section-row h3 {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .link {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: flex;
+        gap: 12px;
+      }
+
+      .card {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .thumb {
+        height: 168px;
+        border-radius: var(--r-lg);
+        background: var(--wash) center/cover no-repeat;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .badge {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-radius: 999px;
+        padding: 5px 8px;
+      }
+
+      .badge.ghost {
+        background: var(--paper);
+        color: var(--ink);
+      }
+
+      .price {
+        margin-top: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .caption {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .tabs {
+        height: 72px;
+        padding: 10px 28px 18px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        background: var(--paper);
+        border-top: 1px solid var(--line);
+      }
+
+      .tab {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+
+      .tab.on {
+        background: var(--wash);
+        color: var(--ink);
+      }
+
+      .hero {
+        height: 280px;
+        display: flex;
+        gap: 8px;
+        margin: 0 -16px;
+        padding: 0 16px;
+      }
+
+      .hero-side {
+        flex: 0 0 28px;
+        border-radius: var(--r-lg);
+        background: var(--wash) center/cover no-repeat;
+      }
+
+      .hero-main {
+        flex: 1;
+        border-radius: var(--r-xl);
+        background: var(--wash) center/cover no-repeat;
+      }
+
+      .detail-price {
+        font-size: 24px;
+        line-height: 32px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.03em;
+      }
+
+      .detail-title {
+        font-size: 20px;
+        line-height: 26px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        text-wrap: balance;
+      }
+
+      .pills {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .pill {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        display: inline-flex;
+        align-items: center;
+        text-transform: uppercase;
+      }
+
+      .pill.outline {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+
+      .block {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+
+      .block-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .copy {
+        margin-top: 8px;
+        font-size: 13px;
+        line-height: 20px;
+        color: var(--muted);
+        max-width: 36ch;
+        text-wrap: pretty;
+      }
+
+      .cta {
+        margin: 12px 16px 20px;
+        height: 52px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .cta.ghost {
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--ink);
+        margin-top: 0;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .input,
+      .area {
+        width: 100%;
+        border: 0;
+        background: var(--wash);
+        border-radius: var(--r-md);
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--ink);
+        padding: 14px 16px;
+      }
+
+      .area {
+        min-height: 88px;
+        resize: none;
+      }
+
+      .preview {
+        height: 120px;
+        border-radius: var(--r-lg);
+        background: var(--wash) center/cover no-repeat;
+      }
+
+      .cat-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .cat {
+        width: calc(50% - 6px);
+      }
+
+      .cat .thumb {
+        height: 118px;
+      }
+
+      .cat-name {
+        margin-top: 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .count {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .mine-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--wash);
+        border-radius: 999px;
+        padding: 8px 8px 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .toggle {
+        width: 44px;
+        height: 26px;
+        background: var(--ink);
+        border-radius: 999px;
+        position: relative;
+      }
+
+      .toggle::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 20px;
+        height: 20px;
+        background: var(--paper);
+        border-radius: 50%;
+      }
+
+      .note {
+        margin-top: 40px;
+        font-size: 13px;
+        line-height: 20px;
+        color: var(--muted);
+        max-width: 72ch;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="board">
+      <header class="board-head">
+        <div>
+          <p class="eyebrow">Preview visual</p>
+          <h1>Panel admin, blanco y negro</h1>
+        </div>
+        <div class="tokens">
+          <span class="token"><span class="swatch" style="background: #111"></span>#111111</span>
+          <span class="token"><span class="swatch" style="background: #8a8a8a"></span>#8A8A8A</span>
+          <span class="token"><span class="swatch" style="background: #f3f3f3"></span>#F3F3F3</span>
+          <span class="token"><span class="swatch" style="background: #fff"></span>#FFFFFF</span>
+        </div>
+      </header>
+
+      <div class="phones">
+        <div class="phone" aria-label="Lista de productos">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status">
+              <span>9:41</span>
+              <div class="status-icons"><span class="bar"></span></div>
+            </div>
+            <div class="nav">
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M4 7h16M4 12h16M4 17h10" />
+                </svg>
+              </span>
+              <h2>Panel</h2>
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 8v8M8 12h8" />
+                </svg>
+              </span>
+            </div>
+            <div class="body">
+              <div class="search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3.5-3.5" />
+                </svg>
+                Buscar producto
+              </div>
+              <div class="chips">
+                <div class="chip active">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+                    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+                    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+                    <rect x="13" y="13" width="7" height="7" rx="1.5" />
+                  </svg>
+                  Todas
+                </div>
+                <div class="chip">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <path d="M8 6h8l2 6H6l2-6zM7 12v7h10v-7" />
+                  </svg>
+                  Ropa
+                </div>
+                <div class="chip">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <rect x="5" y="7" width="14" height="12" rx="2" />
+                    <path d="M9 7V5h6v2" />
+                  </svg>
+                  Tech
+                </div>
+                <div class="chip">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <path d="M4 10h16v9H4zM8 10V7h8v3" />
+                  </svg>
+                  Casa
+                </div>
+              </div>
+              <div class="mine-row">
+                Sólo míos
+                <span class="toggle" aria-hidden="true"></span>
+              </div>
+              <div class="section-row">
+                <h3>Nuevos</h3>
+                <span class="link">Ver todo</span>
+              </div>
+              <div class="grid">
+                <article class="card">
+                  <div
+                    class="thumb"
+                    style="background-image: url('ui-assets/shirt.jpg')"
+                  >
+                    <span class="badge">Mio</span>
+                  </div>
+                  <p class="price">$106.00</p>
+                  <p class="caption">[G3] Remera sport unisex</p>
+                </article>
+                <article class="card">
+                  <div
+                    class="thumb"
+                    style="background-image: url('ui-assets/hoodie.jpg')"
+                  >
+                    <span class="badge ghost">Nuevo</span>
+                  </div>
+                  <p class="price">$198.00</p>
+                  <p class="caption">Hoodie cotton terry</p>
+                </article>
+              </div>
+            </div>
+            <nav class="tabs">
+              <span class="tab on" aria-label="Productos">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path d="M4 10.5L12 4l8 6.5V20H4z" />
+                </svg>
+              </span>
+                  <span class="tab" aria-label="Categorías">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <rect x="4" y="4" width="7" height="7" rx="1.5" />
+                  <rect x="13" y="4" width="7" height="7" rx="1.5" />
+                  <rect x="4" y="13" width="7" height="7" rx="1.5" />
+                  <rect x="13" y="13" width="7" height="7" rx="1.5" />
+                </svg>
+              </span>
+            </nav>
+          </div>
+        </div>
+
+        <div class="phone" aria-label="Detalle de producto">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status">
+              <span>9:41</span>
+              <div class="status-icons"><span class="bar"></span></div>
+            </div>
+            <div class="nav">
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M15 6l-6 6 6 6" />
+                </svg>
+              </span>
+              <h2 class="title-sm">Cotton terry hoodie</h2>
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="6" cy="12" r="1.4" fill="currentColor" />
+                  <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+                  <circle cx="18" cy="12" r="1.4" fill="currentColor" />
+                </svg>
+              </span>
+            </div>
+            <div class="body">
+              <div class="hero">
+                <div
+                  class="hero-side"
+                  style="background-image: url('ui-assets/shirt.jpg')"
+                ></div>
+                <div
+                  class="hero-main"
+                  style="background-image: url('ui-assets/hoodie.jpg')"
+                ></div>
+                <div
+                  class="hero-side"
+                  style="background-image: url('ui-assets/hoodie-side.jpg')"
+                ></div>
+              </div>
+              <p class="detail-price">$198.00</p>
+              <h3 class="detail-title">Hoodie cotton terry con estampa</h3>
+              <div class="pills">
+                <span class="pill">Nuevo</span>
+                <span class="pill outline">Ropa</span>
+                <span class="pill outline">Regular fit</span>
+              </div>
+              <div class="block">
+                <div class="block-head">
+                  <span>Detalle</span>
+                  <span>⌃</span>
+                </div>
+                <p class="copy">
+                  Buzo unisex de algodón. Corte recto, capucha y bolsillo canguro. Publicado por otro grupo: solo lectura.
+                </p>
+              </div>
+            </div>
+            <button class="cta" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4 7h16M4 12h16M4 17h10" />
+              </svg>
+              Ver categoría
+            </button>
+          </div>
+        </div>
+
+        <div class="phone" aria-label="Formulario de producto">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status">
+              <span>9:41</span>
+              <div class="status-icons"><span class="bar"></span></div>
+            </div>
+            <div class="nav">
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M15 6l-6 6 6 6" />
+                </svg>
+              </span>
+              <h2 class="title-sm">Nuevo producto</h2>
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </span>
+            </div>
+            <div class="body">
+              <div
+                class="preview"
+                style="background-image: url('ui-assets/shirt.jpg')"
+              ></div>
+              <label class="field">
+                <span class="label">Imagen</span>
+                <input class="input" value="https://cdn.shop/remera.jpg" readonly />
+              </label>
+              <label class="field">
+                <span class="label">Título</span>
+                <input class="input" value="Remera sport unisex" readonly />
+              </label>
+              <label class="field">
+                <span class="label">Precio</span>
+                <input class="input" value="106" readonly />
+              </label>
+              <div class="field">
+                <span class="label">Categoria</span>
+                <div class="pills">
+                  <span class="pill">Ropa</span>
+                  <span class="pill outline">Tech</span>
+                  <span class="pill outline">Casa</span>
+                  <span class="pill outline">Otros</span>
+                </div>
+              </div>
+              <label class="field">
+                <span class="label">Descripción</span>
+                <textarea class="area" readonly>Corte relaxed, algodón peinado. El prefijo del grupo se agrega al guardar.</textarea>
+              </label>
+            </div>
+            <button class="cta" type="button">Guardar producto</button>
+          </div>
+        </div>
+
+        <div class="phone" aria-label="Categorias">
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status">
+              <span>9:41</span>
+              <div class="status-icons"><span class="bar"></span></div>
+            </div>
+            <div class="nav">
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M4 7h16M4 12h16M4 17h10" />
+                </svg>
+              </span>
+              <h2>Panel</h2>
+              <span class="icon-btn" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3.5-3.5" />
+                </svg>
+              </span>
+            </div>
+            <div class="body">
+              <div class="section-row">
+                <h3>Categorías</h3>
+                <span class="link">4 activas</span>
+              </div>
+              <div class="cat-grid">
+                <article class="cat">
+                  <div
+                    class="thumb"
+                    style="background-image: url('ui-assets/clothes.jpg')"
+                  ></div>
+                  <p class="cat-name">Ropa</p>
+                  <p class="count">128 productos</p>
+                </article>
+                <article class="cat">
+                  <div
+                    class="thumb"
+                    style="background-image: url('ui-assets/tech.jpg')"
+                  ></div>
+                  <p class="cat-name">Tech</p>
+                  <p class="count">64 productos</p>
+                </article>
+                <article class="cat">
+                  <div
+                    class="thumb"
+                    style="background-image: url('ui-assets/home.jpg')"
+                  ></div>
+                  <p class="cat-name">Casa</p>
+                  <p class="count">41 productos</p>
+                </article>
+                <article class="cat">
+                  <div
+                    class="thumb"
+                    style="background-image: url('ui-assets/shoes.jpg')"
+                  ></div>
+                  <p class="cat-name">Otros</p>
+                  <p class="count">19 productos</p>
+                </article>
+              </div>
+            </div>
+            <nav class="tabs">
+              <span class="tab" aria-label="Productos">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path d="M4 10.5L12 4l8 6.5V20H4z" />
+                </svg>
+              </span>
+              <span class="tab on" aria-label="Categorías">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <rect x="4" y="4" width="7" height="7" rx="1.5" />
+                  <rect x="13" y="4" width="7" height="7" rx="1.5" />
+                  <rect x="4" y="13" width="7" height="7" rx="1.5" />
+                  <rect x="13" y="13" width="7" height="7" rx="1.5" />
+                </svg>
+              </span>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <p class="note">
+        Lo que se copia de la referencia: fondo blanco, pozos grises, botones circulares, chips, cards de foto con badge, precio grande y CTA negro a todo el ancho. Lo que no: promo, favoritos ni carrito. En React Native esto mapea a StyleSheet (flex, radius 16–28, wash #F3F3F3, ink #111111) sin sombras de color ni acentos.
+      </p>
+    </div>
+  </body>
+</html>
