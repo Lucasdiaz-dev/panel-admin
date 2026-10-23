@@ -25,6 +25,22 @@ type AppliedFilters = {
   onlyMine?: boolean;
 };
 
+type LoadProductsOptions = {
+  filters?: AppliedFilters;
+  offset?: number;
+  append?: boolean;
+};
+
+function mergeProducts(current: Product[], incoming: Product[]): Product[] {
+  const currentIds = new Set(current.map((product) => product.id));
+  const uniqueIncoming = incoming.filter((product) => {
+    if (currentIds.has(product.id)) return false;
+    currentIds.add(product.id);
+    return true;
+  });
+  return [...current, ...uniqueIncoming];
+}
+
 function parsePrice(value: string): number | undefined {
   if (value.trim() === '') return undefined;
   const price = Number(value.replace(',', '.'));
@@ -53,9 +69,12 @@ export default function ProductListScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [paginationError, setPaginationError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [titleFilter, setTitleFilter] = useState('');
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
@@ -64,6 +83,7 @@ export default function ProductListScreen() {
   const appliedFiltersRef = useRef<AppliedFilters>({});
   const requestIdRef = useRef(0);
   const categoryRequestIdRef = useRef(0);
+  const nextOffsetRef = useRef(0);
 
   const minPrice = parsePrice(minPriceFilter);
   const maxPrice = parsePrice(maxPriceFilter);
@@ -75,39 +95,57 @@ export default function ProductListScreen() {
     selectedCategoryId != null ||
     onlyMineFilter;
 
-  const loadProducts = useCallback(async (filters: AppliedFilters = appliedFiltersRef.current) => {
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
+  const loadProducts = useCallback(
+    async ({ filters = appliedFiltersRef.current, offset = 0, append = false }: LoadProductsOptions = {}) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
 
-    setIsLoading(true);
-    setErrorMessage(null);
+      if (append) {
+        setIsLoadingMore(true);
+        setPaginationError(null);
+      } else {
+        setIsLoading(true);
+        setIsLoadingMore(false);
+        setErrorMessage(null);
+        setPaginationError(null);
+      }
 
-    try {
-      const data = await getProducts({
-        offset: 0,
-        limit: PAGE_SIZE,
-        title: filters.onlyMine ? GROUP_PREFIX : filters.title,
-        priceMin: filters.priceMin,
-        priceMax: filters.priceMax,
-        categoryId: filters.categoryId,
-      });
-      const normalizedTitle = filters.title?.toLocaleLowerCase();
-      const visibleProducts = filters.onlyMine
-        ? data.filter(
-            (product) =>
-              hasGroupPrefix(product.title) &&
-              (!normalizedTitle || product.title.toLocaleLowerCase().includes(normalizedTitle)),
-          )
-        : data;
+      try {
+        const data = await getProducts({
+          offset,
+          limit: PAGE_SIZE,
+          title: filters.onlyMine ? GROUP_PREFIX : filters.title,
+          priceMin: filters.priceMin,
+          priceMax: filters.priceMax,
+          categoryId: filters.categoryId,
+        });
+        const normalizedTitle = filters.title?.toLocaleLowerCase();
+        const visibleProducts = filters.onlyMine
+          ? data.filter(
+              (product) =>
+                hasGroupPrefix(product.title) &&
+                (!normalizedTitle || product.title.toLocaleLowerCase().includes(normalizedTitle)),
+            )
+          : data;
 
-      if (requestId === requestIdRef.current) setProducts(visibleProducts);
-    } catch (error: unknown) {
-      if (requestId !== requestIdRef.current) return;
-      setErrorMessage(error instanceof Error ? error.message : 'No se pudieron cargar los productos.');
-    } finally {
-      if (requestId === requestIdRef.current) setIsLoading(false);
-    }
-  }, []);
+        if (requestId !== requestIdRef.current) return;
+
+        setProducts((current) => (append ? mergeProducts(current, visibleProducts) : visibleProducts));
+        nextOffsetRef.current = offset + data.length;
+        setHasMore(data.length === PAGE_SIZE);
+      } catch (error: unknown) {
+        if (requestId !== requestIdRef.current) return;
+        const message = error instanceof Error ? error.message : 'No se pudieron cargar los productos.';
+        if (append) setPaginationError(message);
+        else setErrorMessage(message);
+      } finally {
+        if (requestId !== requestIdRef.current) return;
+        if (append) setIsLoadingMore(false);
+        else setIsLoading(false);
+      }
+    },
+    [],
+  );
 
   const loadCategories = useCallback(async () => {
     const requestId = categoryRequestIdRef.current + 1;
@@ -151,7 +189,7 @@ export default function ProductListScreen() {
       }
 
       appliedFiltersRef.current = nextFilters;
-      void loadProducts(nextFilters);
+      void loadProducts({ filters: nextFilters });
     }, FILTER_DELAY);
 
     return () => clearTimeout(timeout);
@@ -179,6 +217,11 @@ export default function ProductListScreen() {
   const retry = useCallback(() => {
     void loadProducts();
   }, [loadProducts]);
+
+  const loadMore = useCallback(() => {
+    if (isLoadingMore || !hasMore) return;
+    void loadProducts({ offset: nextOffsetRef.current, append: true });
+  }, [hasMore, isLoadingMore, loadProducts]);
 
   const retryCategories = useCallback(() => {
     void loadCategories();
@@ -269,6 +312,29 @@ export default function ProductListScreen() {
               </Pressable>
             </View>
           }
+          ListFooterComponent={
+            hasMore || paginationError ? (
+              <View style={styles.paginationFooter}>
+                {paginationError ? <Text style={styles.paginationError}>{paginationError}</Text> : null}
+                {hasMore ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: isLoadingMore }}
+                    disabled={isLoadingMore}
+                    onPress={loadMore}
+                    style={({ pressed }) => [
+                      styles.loadMoreButton,
+                      (pressed || isLoadingMore) && styles.loadMoreButtonPressed,
+                    ]}
+                  >
+                    <Text style={styles.loadMoreButtonText}>
+                      {isLoadingMore ? 'Cargando...' : paginationError ? 'Reintentar' : 'Cargar más'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : undefined
+          }
           numColumns={2}
           renderItem={({ item }) => (
             <ProductCard product={item} onPress={() => openProduct(item.id)} />
@@ -337,6 +403,35 @@ const styles = StyleSheet.create({
   },
   productRow: {
     gap: 12,
+  },
+  paginationFooter: {
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 8,
+  },
+  paginationError: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: colors.text,
+    borderRadius: 999,
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  loadMoreButtonPressed: {
+    opacity: 0.72,
+  },
+  loadMoreButtonText: {
+    color: colors.inverse,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   emptyState: {
     alignItems: 'center',
