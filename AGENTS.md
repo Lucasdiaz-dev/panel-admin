@@ -63,6 +63,7 @@ No renombres archivos de `src/app/`. No agregues dependencias sin el tech lead.
 
 ### Navegación y UI
 
+- UI: leé `docs/design.md` y mirá `docs/ui-preview.html` antes de tocar estilos o pantallas. No inventes otra paleta ni layout.
 - Por la ruta viaja **solo el id (string)**. Nunca `JSON.stringify` de un producto o categoría.
 - Estilos: solo `StyleSheet.create`. `style={[styles.card, isMine && styles.mine]}` sí. `style={{ flex: 1 }}` no. Nada de `className`. Colores solo desde `src/constants/`.
 - Las imágenes son URLs. Si fallan, placeholder; no crashear.
