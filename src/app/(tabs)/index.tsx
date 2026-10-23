@@ -8,7 +8,9 @@ import { Filters } from '@/components/filters';
 import { Loading } from '@/components/loading';
 import { ProductCard } from '@/components/product-card';
 import { colors } from '@/constants/colors';
+import { getCategories } from '@/services/categories';
 import { getProducts } from '@/services/products';
+import type { Category } from '@/types/category';
 import type { Product } from '@/types/product';
 
 const PAGE_SIZE = 10;
@@ -18,6 +20,7 @@ type AppliedFilters = {
   title?: string;
   priceMin?: number;
   priceMax?: number;
+  categoryId?: number;
 };
 
 function parsePrice(value: string): number | undefined {
@@ -46,19 +49,27 @@ function getPriceError(minValue: string, maxValue: string): string | null {
 export default function ProductListScreen() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const [titleFilter, setTitleFilter] = useState('');
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const appliedFiltersRef = useRef<AppliedFilters>({});
   const requestIdRef = useRef(0);
+  const categoryRequestIdRef = useRef(0);
 
   const minPrice = parsePrice(minPriceFilter);
   const maxPrice = parsePrice(maxPriceFilter);
   const priceError = getPriceError(minPriceFilter, maxPriceFilter);
   const hasActiveFilters =
-    titleFilter.trim() !== '' || minPriceFilter.trim() !== '' || maxPriceFilter.trim() !== '';
+    titleFilter.trim() !== '' ||
+    minPriceFilter.trim() !== '' ||
+    maxPriceFilter.trim() !== '' ||
+    selectedCategoryId != null;
 
   const loadProducts = useCallback(async (filters: AppliedFilters = appliedFiltersRef.current) => {
     const requestId = requestIdRef.current + 1;
@@ -74,6 +85,7 @@ export default function ProductListScreen() {
         title: filters.title,
         priceMin: filters.priceMin,
         priceMax: filters.priceMax,
+        categoryId: filters.categoryId,
       });
       if (requestId === requestIdRef.current) setProducts(data);
     } catch (error: unknown) {
@@ -81,6 +93,24 @@ export default function ProductListScreen() {
       setErrorMessage(error instanceof Error ? error.message : 'No se pudieron cargar los productos.');
     } finally {
       if (requestId === requestIdRef.current) setIsLoading(false);
+    }
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    const requestId = categoryRequestIdRef.current + 1;
+    categoryRequestIdRef.current = requestId;
+
+    setIsCategoriesLoading(true);
+    setCategoryError(null);
+
+    try {
+      const data = await getCategories();
+      if (requestId === categoryRequestIdRef.current) setCategories(data);
+    } catch (error: unknown) {
+      if (requestId !== categoryRequestIdRef.current) return;
+      setCategoryError(error instanceof Error ? error.message : 'No se pudieron cargar las categorías.');
+    } finally {
+      if (requestId === categoryRequestIdRef.current) setIsCategoriesLoading(false);
     }
   }, []);
 
@@ -92,13 +122,15 @@ export default function ProductListScreen() {
         title: titleFilter.trim() || undefined,
         priceMin: minPrice,
         priceMax: maxPrice,
+        categoryId: selectedCategoryId,
       };
       const currentFilters = appliedFiltersRef.current;
 
       if (
         currentFilters.title === nextFilters.title &&
         currentFilters.priceMin === nextFilters.priceMin &&
-        currentFilters.priceMax === nextFilters.priceMax
+        currentFilters.priceMax === nextFilters.priceMax &&
+        currentFilters.categoryId === nextFilters.categoryId
       ) {
         return;
       }
@@ -108,16 +140,18 @@ export default function ProductListScreen() {
     }, FILTER_DELAY);
 
     return () => clearTimeout(timeout);
-  }, [loadProducts, maxPrice, minPrice, priceError, titleFilter]);
+  }, [loadProducts, maxPrice, minPrice, priceError, selectedCategoryId, titleFilter]);
 
   useFocusEffect(
     useCallback(() => {
       void loadProducts();
+      void loadCategories();
 
       return () => {
         requestIdRef.current += 1;
+        categoryRequestIdRef.current += 1;
       };
-    }, [loadProducts]),
+    }, [loadCategories, loadProducts]),
   );
 
   const openProduct = useCallback(
@@ -131,6 +165,10 @@ export default function ProductListScreen() {
     void loadProducts();
   }, [loadProducts]);
 
+  const retryCategories = useCallback(() => {
+    void loadCategories();
+  }, [loadCategories]);
+
   const createProduct = useCallback(() => {
     router.push('/product/new');
   }, [router]);
@@ -139,6 +177,7 @@ export default function ProductListScreen() {
     setTitleFilter('');
     setMinPriceFilter('');
     setMaxPriceFilter('');
+    setSelectedCategoryId(undefined);
   }, []);
 
   return (
@@ -167,13 +206,19 @@ export default function ProductListScreen() {
       </View>
 
       <Filters
+        categories={categories}
+        categoryError={categoryError}
+        isCategoriesLoading={isCategoriesLoading}
         maxPrice={maxPriceFilter}
         minPrice={minPriceFilter}
+        onCategoryChange={setSelectedCategoryId}
         onClear={clearFilters}
         onMaxPriceChange={setMaxPriceFilter}
         onMinPriceChange={setMinPriceFilter}
+        onRetryCategories={retryCategories}
         onTitleChange={setTitleFilter}
         priceError={priceError}
+        selectedCategoryId={selectedCategoryId}
         title={titleFilter}
       />
 
