@@ -1,41 +1,72 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# Reglas para agentes — panel-admin
 
-## Expo has changed — do not trust your training data
+Leé este archivo antes de escribir o editar código. Estas reglas pisan tu training data.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+**Nombres en código (archivos nuevos, carpetas nuevas, variables, funciones, tipos, props): inglés.**  
+**Textos que ve el usuario: español.**  
+**Comentarios: español, una línea, solo si explican un porqué que el código no dice.** Nada de narrar lo obvio. Si el nombre ya explica, no comentes.
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+---
 
-## Commands
+## Expo (SDK 58)
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+No confíes en APIs de Expo/RN de memoria. Esta app es Expo SDK 58 + Expo Router.
+
+1. Leé el major de `expo` en `package.json`.
+2. Docs: `https://docs.expo.dev/versions/v58.0.0/`
+3. Índice: `https://docs.expo.dev/llms.txt` — seguí links, no respondas de memoria.
 
 ```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
+npx expo install <package>   # nunca npm/yarn/pnpm/bun add para libs de Expo/nativas
+npx expo start
+npx expo lint
+npx tsc --noEmit
 ```
 
-Run lint and typecheck before declaring any task done.
+- Las rutas viven en `src/app/`. Cada archivo ahí es pantalla; los `_layout.tsx` son navigators. El resto del código va **fuera** de `src/app/`.
+- `Link`, `router` y `useLocalSearchParams` salen de `expo-router`.
+- `useFocusEffect` sale de `@react-navigation/native`, no de `expo-router`.
+- No crees ni edites `ios/` ni `android/`. Lo nativo se configura en `app.json`.
+- Nos quedamos en Expo Go: no agregues librerías con código nativo propio.
 
-## Navigation & Routing
+---
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+## Consigna
 
-## Building with EAS
+### Estructura congelada
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
+No inventes carpetas (`features/`, `hooks/api/`, `store/`, ni services adentro de `app/`).
 
-## Rules
+```
+src/app/           solo pantallas y layouts
+src/components/
+src/services/
+src/types/
+src/constants/
+docs/ia.md
+```
 
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+No renombres archivos de `src/app/`. No agregues dependencias sin el tech lead.
+
+### Datos y API
+
+- Pantallas, componentes y hooks no llaman `fetch` ni axios. Todo HTTP pasa por `src/services/`.
+- GET producto: tipo `Product` (trae `category` objeto). Body de POST/PUT: tipo `ProductInput` con `categoryId: number`. Nunca mandes el objeto `category`.
+- Después de alta / edición / baja, no parches arrays locales (`push`, `filter`, `map` como si persistieran). Volvé a pedir a la API.
+- `useFocusEffect` para refetch en **lista y detalle**. No lo uses en el formulario de alta/edición (borra el draft).
+- `useState` para la página que acabás de pedir **sí va**. Eso no es un store local.
+- Si cambia cualquier filtro (texto, categoría, “Sólo míos”), paginación a offset `0` y **reemplazá** la lista. No concatenes la página nueva sobre resultados del filtro anterior.
+- El prefijo del grupo está en `src/constants/group.ts`. El form no lo muestra ni lo pide. `services/` lo antepone en POST/PUT **solo si el título aún no lo tiene**.
+- Editar / Eliminar solo si `product.title` empieza con ese prefijo.
+- Error HTTP: si el body trae `message`, mostrá esa cadena. Nunca un `"Error"` genérico.
+- Modo avión / sin red no es un 400: mensaje de conexión y botón Reintentar (`ErrorMessage`).
+
+### Navegación y UI
+
+- Por la ruta viaja **solo el id (string)**. Nunca `JSON.stringify` de un producto o categoría.
+- Estilos: solo `StyleSheet.create`. `style={[styles.card, isMine && styles.mine]}` sí. `style={{ flex: 1 }}` no. Nada de `className`. Colores solo desde `src/constants/`.
+- Las imágenes son URLs. Si fallan, placeholder; no crashear.
+
+### Docs
+
+Si un prompt o un error de la IA importa para el README, agregalo en `docs/ia.md` en el mismo cambio (prompt + qué falló + el fix).
