@@ -1,9 +1,10 @@
 import { Tabs, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorMessage } from '@/components/error-message';
+import { Filters } from '@/components/filters';
 import { Loading } from '@/components/loading';
 import { ProductCard } from '@/components/product-card';
 import { colors } from '@/constants/colors';
@@ -11,15 +12,55 @@ import { getProducts } from '@/services/products';
 import type { Product } from '@/types/product';
 
 const PAGE_SIZE = 10;
+const FILTER_DELAY = 400;
+
+type AppliedFilters = {
+  title?: string;
+  priceMin?: number;
+  priceMax?: number;
+};
+
+function parsePrice(value: string): number | undefined {
+  if (value.trim() === '') return undefined;
+  const price = Number(value.replace(',', '.'));
+  return Number.isFinite(price) && price >= 0 ? price : undefined;
+}
+
+function getPriceError(minValue: string, maxValue: string): string | null {
+  const hasMinPrice = minValue.trim() !== '';
+  const hasMaxPrice = maxValue.trim() !== '';
+  const minPrice = parsePrice(minValue);
+  const maxPrice = parsePrice(maxValue);
+
+  if (hasMinPrice && minPrice == null) return 'Ingresá un precio mínimo válido.';
+  if (hasMaxPrice && maxPrice == null) return 'Ingresá un precio máximo válido.';
+  if (hasMinPrice && !hasMaxPrice) return 'Completá también el precio máximo.';
+  if (!hasMinPrice && hasMaxPrice) return 'Completá también el precio mínimo.';
+  if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+    return 'El precio mínimo no puede superar al máximo.';
+  }
+
+  return null;
+}
 
 export default function ProductListScreen() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [titleFilter, setTitleFilter] = useState('');
+  const [minPriceFilter, setMinPriceFilter] = useState('');
+  const [maxPriceFilter, setMaxPriceFilter] = useState('');
+  const appliedFiltersRef = useRef<AppliedFilters>({});
   const requestIdRef = useRef(0);
 
-  const loadProducts = useCallback(async () => {
+  const minPrice = parsePrice(minPriceFilter);
+  const maxPrice = parsePrice(maxPriceFilter);
+  const priceError = getPriceError(minPriceFilter, maxPriceFilter);
+  const hasActiveFilters =
+    titleFilter.trim() !== '' || minPriceFilter.trim() !== '' || maxPriceFilter.trim() !== '';
+
+  const loadProducts = useCallback(async (filters: AppliedFilters = appliedFiltersRef.current) => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
@@ -27,7 +68,13 @@ export default function ProductListScreen() {
     setErrorMessage(null);
 
     try {
-      const data = await getProducts({ offset: 0, limit: PAGE_SIZE });
+      const data = await getProducts({
+        offset: 0,
+        limit: PAGE_SIZE,
+        title: filters.title,
+        priceMin: filters.priceMin,
+        priceMax: filters.priceMax,
+      });
       if (requestId === requestIdRef.current) setProducts(data);
     } catch (error: unknown) {
       if (requestId !== requestIdRef.current) return;
@@ -36,6 +83,32 @@ export default function ProductListScreen() {
       if (requestId === requestIdRef.current) setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (priceError) return;
+
+    const timeout = setTimeout(() => {
+      const nextFilters = {
+        title: titleFilter.trim() || undefined,
+        priceMin: minPrice,
+        priceMax: maxPrice,
+      };
+      const currentFilters = appliedFiltersRef.current;
+
+      if (
+        currentFilters.title === nextFilters.title &&
+        currentFilters.priceMin === nextFilters.priceMin &&
+        currentFilters.priceMax === nextFilters.priceMax
+      ) {
+        return;
+      }
+
+      appliedFiltersRef.current = nextFilters;
+      void loadProducts(nextFilters);
+    }, FILTER_DELAY);
+
+    return () => clearTimeout(timeout);
+  }, [loadProducts, maxPrice, minPrice, priceError, titleFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,6 +135,12 @@ export default function ProductListScreen() {
     router.push('/product/new');
   }, [router]);
 
+  const clearFilters = useCallback(() => {
+    setTitleFilter('');
+    setMinPriceFilter('');
+    setMaxPriceFilter('');
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <Tabs.Screen options={{ headerShown: false }} />
@@ -87,6 +166,17 @@ export default function ProductListScreen() {
         </Pressable>
       </View>
 
+      <Filters
+        maxPrice={maxPriceFilter}
+        minPrice={minPriceFilter}
+        onClear={clearFilters}
+        onMaxPriceChange={setMaxPriceFilter}
+        onMinPriceChange={setMinPriceFilter}
+        onTitleChange={setTitleFilter}
+        priceError={priceError}
+        title={titleFilter}
+      />
+
       {isLoading ? <Loading /> : null}
       {!isLoading && errorMessage ? <ErrorMessage message={errorMessage} onRetry={retry} /> : null}
       {!isLoading && !errorMessage ? (
@@ -97,14 +187,22 @@ export default function ProductListScreen() {
           keyExtractor={(product) => String(product.id)}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No hay productos para mostrar</Text>
-              <Text style={styles.emptyMessage}>Podés crear el primer producto desde esta pantalla.</Text>
+              <Text style={styles.emptyTitle}>
+                {hasActiveFilters ? 'No encontramos productos' : 'No hay productos para mostrar'}
+              </Text>
+              <Text style={styles.emptyMessage}>
+                {hasActiveFilters
+                  ? 'Probá con otros filtros.'
+                  : 'Podés crear el primer producto desde esta pantalla.'}
+              </Text>
               <Pressable
                 accessibilityRole="button"
-                onPress={createProduct}
+                onPress={hasActiveFilters ? clearFilters : createProduct}
                 style={({ pressed }) => [styles.emptyButton, pressed && styles.emptyButtonPressed]}
               >
-                <Text style={styles.emptyButtonText}>Crear producto</Text>
+                <Text style={styles.emptyButtonText}>
+                  {hasActiveFilters ? 'Limpiar filtros' : 'Crear producto'}
+                </Text>
               </Pressable>
             </View>
           }
