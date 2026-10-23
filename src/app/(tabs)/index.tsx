@@ -1,5 +1,5 @@
 import { Tabs, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,31 +17,34 @@ export default function ProductListScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const requestIdRef = useRef(0);
+
+  const loadProducts = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const data = await getProducts({ offset: 0, limit: PAGE_SIZE });
+      if (requestId === requestIdRef.current) setProducts(data);
+    } catch (error: unknown) {
+      if (requestId !== requestIdRef.current) return;
+      setErrorMessage(error instanceof Error ? error.message : 'No se pudieron cargar los productos.');
+    } finally {
+      if (requestId === requestIdRef.current) setIsLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      getProducts({ offset: 0, limit: PAGE_SIZE })
-        .then((data) => {
-          if (isActive) setProducts(data);
-        })
-        .catch((error: unknown) => {
-          if (!isActive) return;
-          setErrorMessage(error instanceof Error ? error.message : 'No se pudieron cargar los productos.');
-        })
-        .finally(() => {
-          if (isActive) setIsLoading(false);
-        });
+      void loadProducts();
 
       return () => {
-        isActive = false;
+        requestIdRef.current += 1;
       };
-    }, [reloadKey]),
+    }, [loadProducts]),
   );
 
   const openProduct = useCallback(
@@ -52,8 +55,8 @@ export default function ProductListScreen() {
   );
 
   const retry = useCallback(() => {
-    setReloadKey((current) => current + 1);
-  }, []);
+    void loadProducts();
+  }, [loadProducts]);
 
   const createProduct = useCallback(() => {
     router.push('/product/new');
