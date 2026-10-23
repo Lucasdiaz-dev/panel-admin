@@ -1,5 +1,4 @@
-import { Tabs, useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { Tabs, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
