@@ -8,6 +8,7 @@ import { Filters } from '@/components/filters';
 import { Loading } from '@/components/loading';
 import { ProductCard } from '@/components/product-card';
 import { colors } from '@/constants/colors';
+import { GROUP_PREFIX, hasGroupPrefix } from '@/constants/group';
 import { getCategories } from '@/services/categories';
 import { getProducts } from '@/services/products';
 import type { Category } from '@/types/category';
@@ -21,6 +22,7 @@ type AppliedFilters = {
   priceMin?: number;
   priceMax?: number;
   categoryId?: number;
+  onlyMine?: boolean;
 };
 
 function parsePrice(value: string): number | undefined {
@@ -58,6 +60,7 @@ export default function ProductListScreen() {
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
+  const [onlyMineFilter, setOnlyMineFilter] = useState(false);
   const appliedFiltersRef = useRef<AppliedFilters>({});
   const requestIdRef = useRef(0);
   const categoryRequestIdRef = useRef(0);
@@ -69,7 +72,8 @@ export default function ProductListScreen() {
     titleFilter.trim() !== '' ||
     minPriceFilter.trim() !== '' ||
     maxPriceFilter.trim() !== '' ||
-    selectedCategoryId != null;
+    selectedCategoryId != null ||
+    onlyMineFilter;
 
   const loadProducts = useCallback(async (filters: AppliedFilters = appliedFiltersRef.current) => {
     const requestId = requestIdRef.current + 1;
@@ -82,12 +86,21 @@ export default function ProductListScreen() {
       const data = await getProducts({
         offset: 0,
         limit: PAGE_SIZE,
-        title: filters.title,
+        title: filters.onlyMine ? GROUP_PREFIX : filters.title,
         priceMin: filters.priceMin,
         priceMax: filters.priceMax,
         categoryId: filters.categoryId,
       });
-      if (requestId === requestIdRef.current) setProducts(data);
+      const normalizedTitle = filters.title?.toLocaleLowerCase();
+      const visibleProducts = filters.onlyMine
+        ? data.filter(
+            (product) =>
+              hasGroupPrefix(product.title) &&
+              (!normalizedTitle || product.title.toLocaleLowerCase().includes(normalizedTitle)),
+          )
+        : data;
+
+      if (requestId === requestIdRef.current) setProducts(visibleProducts);
     } catch (error: unknown) {
       if (requestId !== requestIdRef.current) return;
       setErrorMessage(error instanceof Error ? error.message : 'No se pudieron cargar los productos.');
@@ -123,6 +136,7 @@ export default function ProductListScreen() {
         priceMin: minPrice,
         priceMax: maxPrice,
         categoryId: selectedCategoryId,
+        onlyMine: onlyMineFilter || undefined,
       };
       const currentFilters = appliedFiltersRef.current;
 
@@ -130,7 +144,8 @@ export default function ProductListScreen() {
         currentFilters.title === nextFilters.title &&
         currentFilters.priceMin === nextFilters.priceMin &&
         currentFilters.priceMax === nextFilters.priceMax &&
-        currentFilters.categoryId === nextFilters.categoryId
+        currentFilters.categoryId === nextFilters.categoryId &&
+        currentFilters.onlyMine === nextFilters.onlyMine
       ) {
         return;
       }
@@ -140,7 +155,7 @@ export default function ProductListScreen() {
     }, FILTER_DELAY);
 
     return () => clearTimeout(timeout);
-  }, [loadProducts, maxPrice, minPrice, priceError, selectedCategoryId, titleFilter]);
+  }, [loadProducts, maxPrice, minPrice, onlyMineFilter, priceError, selectedCategoryId, titleFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -178,6 +193,7 @@ export default function ProductListScreen() {
     setMinPriceFilter('');
     setMaxPriceFilter('');
     setSelectedCategoryId(undefined);
+    setOnlyMineFilter(false);
   }, []);
 
   return (
@@ -215,8 +231,10 @@ export default function ProductListScreen() {
         onClear={clearFilters}
         onMaxPriceChange={setMaxPriceFilter}
         onMinPriceChange={setMinPriceFilter}
+        onOnlyMineChange={setOnlyMineFilter}
         onRetryCategories={retryCategories}
         onTitleChange={setTitleFilter}
+        onlyMine={onlyMineFilter}
         priceError={priceError}
         selectedCategoryId={selectedCategoryId}
         title={titleFilter}

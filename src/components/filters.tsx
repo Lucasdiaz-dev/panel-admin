@@ -14,11 +14,13 @@ type FiltersProps = {
   selectedCategoryId?: number;
   isCategoriesLoading: boolean;
   categoryError: string | null;
+  onlyMine: boolean;
   onTitleChange: (value: string) => void;
   onMinPriceChange: (value: string) => void;
   onMaxPriceChange: (value: string) => void;
   onCategoryChange: (categoryId?: number) => void;
   onRetryCategories: () => void;
+  onOnlyMineChange: (value: boolean) => void;
   onClear: () => void;
 };
 
@@ -31,18 +33,21 @@ export function Filters({
   selectedCategoryId,
   isCategoriesLoading,
   categoryError,
+  onlyMine,
   onTitleChange,
   onMinPriceChange,
   onMaxPriceChange,
   onCategoryChange,
   onRetryCategories,
+  onOnlyMineChange,
   onClear,
 }: FiltersProps) {
   const hasFilters =
     title.trim() !== '' ||
     minPrice.trim() !== '' ||
     maxPrice.trim() !== '' ||
-    selectedCategoryId != null;
+    selectedCategoryId != null ||
+    onlyMine;
 
   return (
     <View style={styles.container}>
@@ -124,6 +129,18 @@ export function Filters({
           </Pressable>
         </View>
       ) : null}
+
+      <Pressable
+        accessibilityRole="switch"
+        accessibilityState={{ checked: onlyMine }}
+        onPress={() => onOnlyMineChange(!onlyMine)}
+        style={({ pressed }) => [styles.mineRow, pressed && styles.mineRowPressed]}
+      >
+        <Text style={styles.mineText}>Sólo míos</Text>
+        <View style={[styles.toggle, onlyMine && styles.toggleActive]}>
+          <View style={[styles.toggleKnob, onlyMine && styles.toggleKnobActive]} />
+        </View>
+      </Pressable>
 
       <View style={styles.priceHeader}>
         <Text style={styles.label}>Rango de precio</Text>
@@ -230,6 +247,48 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 12,
     fontWeight: '600',
+  },
+  mineRow: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 42,
+    paddingBottom: 8,
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingTop: 8,
+  },
+  mineRowPressed: {
+    opacity: 0.72,
+  },
+  mineText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  toggle: {
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 26,
+    position: 'relative',
+    width: 44,
+  },
+  toggleActive: {
+    backgroundColor: colors.text,
+  },
+  toggleKnob: {
+    backgroundColor: colors.inverse,
+    borderRadius: 10,
+    height: 20,
+    left: 3,
+    position: 'absolute',
+    top: 3,
+    width: 20,
+  },
+  toggleKnobActive: {
+    left: 21,
   },
   priceHeader: {
     alignItems: 'center',
