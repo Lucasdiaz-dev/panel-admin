@@ -1,6 +1,6 @@
 import { Tabs, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorMessage } from '@/components/error-message';
@@ -16,6 +16,7 @@ import type { Product } from '@/types/product';
 
 const PAGE_SIZE = 10;
 const FILTER_DELAY = 400;
+const REFRESH_COLORS = [colors.text];
 
 type AppliedFilters = {
   title?: string;
@@ -29,6 +30,7 @@ type LoadProductsOptions = {
   filters?: AppliedFilters;
   offset?: number;
   append?: boolean;
+  refresh?: boolean;
 };
 
 function mergeProducts(current: Product[], incoming: Product[]): Product[] {
@@ -70,6 +72,7 @@ export default function ProductListScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [paginationError, setPaginationError] = useState<string | null>(null);
@@ -96,16 +99,28 @@ export default function ProductListScreen() {
     onlyMineFilter;
 
   const loadProducts = useCallback(
-    async ({ filters = appliedFiltersRef.current, offset = 0, append = false }: LoadProductsOptions = {}) => {
+    async ({
+      filters = appliedFiltersRef.current,
+      offset = 0,
+      append = false,
+      refresh = false,
+    }: LoadProductsOptions = {}) => {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
 
       if (append) {
+        setIsRefreshing(false);
         setIsLoadingMore(true);
+        setPaginationError(null);
+      } else if (refresh) {
+        setIsRefreshing(true);
+        setIsLoadingMore(false);
+        setErrorMessage(null);
         setPaginationError(null);
       } else {
         setIsLoading(true);
         setIsLoadingMore(false);
+        setIsRefreshing(false);
         setErrorMessage(null);
         setPaginationError(null);
       }
@@ -141,6 +156,7 @@ export default function ProductListScreen() {
       } finally {
         if (requestId !== requestIdRef.current) return;
         if (append) setIsLoadingMore(false);
+        else if (refresh) setIsRefreshing(false);
         else setIsLoading(false);
       }
     },
@@ -218,10 +234,16 @@ export default function ProductListScreen() {
     void loadProducts();
   }, [loadProducts]);
 
+  const refresh = useCallback(() => {
+    if (isLoading || isLoadingMore || isRefreshing) return;
+    void loadProducts({ refresh: true });
+    void loadCategories();
+  }, [isLoading, isLoadingMore, isRefreshing, loadCategories, loadProducts]);
+
   const loadMore = useCallback(() => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMore || isRefreshing || !hasMore) return;
     void loadProducts({ offset: nextOffsetRef.current, append: true });
-  }, [hasMore, isLoadingMore, loadProducts]);
+  }, [hasMore, isLoadingMore, isRefreshing, loadProducts]);
 
   const retryCategories = useCallback(() => {
     void loadCategories();
@@ -319,12 +341,12 @@ export default function ProductListScreen() {
                 {hasMore ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: isLoadingMore }}
-                    disabled={isLoadingMore}
+                    accessibilityState={{ disabled: isLoadingMore || isRefreshing }}
+                    disabled={isLoadingMore || isRefreshing}
                     onPress={loadMore}
                     style={({ pressed }) => [
                       styles.loadMoreButton,
-                      (pressed || isLoadingMore) && styles.loadMoreButtonPressed,
+                      (pressed || isLoadingMore || isRefreshing) && styles.loadMoreButtonPressed,
                     ]}
                   >
                     <Text style={styles.loadMoreButtonText}>
@@ -336,6 +358,15 @@ export default function ProductListScreen() {
             ) : undefined
           }
           numColumns={2}
+          refreshControl={
+            <RefreshControl
+              colors={REFRESH_COLORS}
+              onRefresh={refresh}
+              progressBackgroundColor={colors.background}
+              refreshing={isRefreshing}
+              tintColor={colors.text}
+            />
+          }
           renderItem={({ item }) => (
             <ProductCard product={item} onPress={() => openProduct(item.id)} />
           )}

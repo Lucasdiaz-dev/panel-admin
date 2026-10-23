@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/colors';
-import { hasGroupPrefix } from '@/constants/group';
+import { getDisplayTitle, hasGroupPrefix } from '@/constants/group';
 import type { Product } from '@/types/product';
 
 type ProductCardProps = {
@@ -13,6 +13,7 @@ type ProductCardProps = {
 
 export function ProductCard({ product, onPress }: ProductCardProps) {
   const imageUrl = product.images[0];
+  const displayTitle = getDisplayTitle(product.title);
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
 
   return (
     <Pressable
-      accessibilityLabel={`Ver ${product.title}`}
+      accessibilityLabel={`Ver ${displayTitle}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -29,7 +30,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
       <View style={styles.imageContainer}>
         {imageUrl && !imageFailed ? (
           <Image
-            accessibilityLabel={`Imagen de ${product.title}`}
+            accessibilityLabel={`Imagen de ${displayTitle}`}
             contentFit="cover"
             onError={() => setImageFailed(true)}
             source={imageUrl}
@@ -50,7 +51,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
 
       <Text style={styles.price}>${product.price.toFixed(2)}</Text>
       <Text numberOfLines={1} style={styles.title}>
-        {product.title}
+        {displayTitle}
       </Text>
       <Text numberOfLines={1} style={styles.category}>
         {product.category.name}
