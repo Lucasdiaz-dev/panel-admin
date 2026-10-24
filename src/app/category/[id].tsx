@@ -1,14 +1,10 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
+import { ErrorMessage } from '@/components/error-message';
+import { Loading } from '@/components/loading';
+import { ProductCard } from '@/components/product-card';
 import { colors } from '@/constants/colors';
 import { getCategory, getProductsByCategory } from '@/services/categories';
 import type { Product } from '@/types/product';
@@ -67,30 +63,23 @@ export default function CategoryProductsScreen() {
     }, [id, retry]),
   );
 
+  function handleRetry() {
+    setRetry((previous) => previous + 1);
+  }
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: categoryName }} />
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.message}>Cargando productos...</Text>
-        </View>
+        <Loading />
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.error}>{error}</Text>
-
-          <Pressable
-            style={styles.button}
-            accessibilityRole="button"
-            onPress={() => setRetry(retry + 1)}
-          >
-            <Text style={styles.buttonText}>Reintentar</Text>
-          </Pressable>
-        </View>
+        <ErrorMessage message={error} onRetry={handleRetry} />
       ) : (
         <FlatList
           contentContainerStyle={styles.list}
+          columnWrapperStyle={styles.row}
+          numColumns={2}
           data={products}
           keyExtractor={(item) => String(item.id)}
           ListEmptyComponent={
@@ -99,20 +88,15 @@ export default function CategoryProductsScreen() {
             </Text>
           }
           renderItem={({ item }) => (
-            <Pressable
-              style={styles.product}
-              accessibilityRole="button"
-              accessibilityLabel={`Ver detalle de ${item.title}`}
+            <ProductCard
+              product={item}
               onPress={() =>
                 router.push({
                   pathname: '/product/[id]',
                   params: { id: String(item.id) },
                 })
               }
-            >
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.price}>${item.price}</Text>
-            </Pressable>
+            />
           )}
         />
       )}
@@ -125,51 +109,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 16,
-  },
   list: {
     padding: 16,
+    gap: 24,
+  },
+  row: {
+    justifyContent: 'space-between',
     gap: 12,
   },
   message: {
     color: colors.textMuted,
     textAlign: 'center',
-  },
-  error: {
-    color: colors.danger,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: colors.surface,
-    fontWeight: '600',
-  },
-  product: {
-    padding: 16,
-    gap: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary,
   },
 });

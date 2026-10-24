@@ -1,7 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -10,6 +9,8 @@ import {
   View,
 } from 'react-native';
 
+import { ErrorMessage } from '@/components/error-message';
+import { Loading } from '@/components/loading';
 import { colors } from '@/constants/colors';
 import { getCategories } from '@/services/categories';
 import type { Category } from '@/types/category';
@@ -61,25 +62,19 @@ export default function CategoryListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.message}>Cargando categorías...</Text>
+      <View style={styles.container}>
+        <Loading />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-
-        <Pressable
-          style={styles.button}
-          onPress={() => setRetry(retry + 1)}
-          accessibilityRole="button"
-        >
-          <Text style={styles.buttonText}>Reintentar</Text>
-        </Pressable>
+      <View style={styles.container}>
+        <ErrorMessage
+          message={error}
+          onRetry={() => setRetry((previous) => previous + 1)}
+        />
       </View>
     );
   }
@@ -88,6 +83,8 @@ export default function CategoryListScreen() {
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.list}
+      numColumns={2}
+      columnWrapperStyle={styles.row}
       data={categories}
       keyExtractor={(item) => String(item.id)}
       ListEmptyComponent={
@@ -114,12 +111,18 @@ export default function CategoryListScreen() {
               source={{ uri: item.image }}
               style={styles.image}
               onError={() =>
-                setFailedImages((previous) => [...previous, item.image])
+                setFailedImages((previous) =>
+                  previous.includes(item.image)
+                    ? previous
+                    : [...previous, item.image],
+                )
               }
             />
           )}
 
-          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.name} numberOfLines={2}>
+            {item.name}
+          </Text>
         </Pressable>
       )}
     />
@@ -135,51 +138,27 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 16,
-    backgroundColor: colors.background,
+  row: {
+    gap: 12,
   },
   message: {
     color: colors.textMuted,
     textAlign: 'center',
   },
-  error: {
-    color: colors.danger,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: colors.surface,
-    fontWeight: '600',
-  },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    flex: 1,
+    gap: 8,
   },
   image: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: '100%',
+    height: 118,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
   },
   placeholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: '100%',
+    height: 118,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.placeholder,
@@ -189,8 +168,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   name: {
-    flex: 1,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },

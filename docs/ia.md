@@ -41,3 +41,16 @@
   Primero faltaba el módulo y, al instalarlo, falló el contexto de navegación.
 - Corrección: importar useFocusEffect desde expo-router para SDK 58,
   retirar la dependencia innecesaria.
+## Integración visual de categorías
+
+- Prompt: implementar la presentación de categorías según docs/design.md
+  y docs/ui-preview.html, con componentes
+  compartidos del grupo.
+- Implementación: grilla de categorías de dos columnas, colores desde
+  colors.ts y uso de ProductCard para los productos por categoría.
+  Se integraron Loading y ErrorMessage sin modificar sus archivos.
+- Validación: TypeScript sin errores y navegación desde categorías
+  hasta seleccionar un producto probada en Expo Go.
+- Pendientes: revisar el detalle, que queda en blanco tanto desde
+  Productos como desde Categorías, y adaptar los textos de los
+  componentes compartidos para categorías.
