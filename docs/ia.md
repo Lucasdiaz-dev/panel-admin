@@ -31,3 +31,26 @@
 **Qué falló:** `automaticallyAdjustKeyboardInsets` solo asomaba el borde del `TextInput` multiline. Envolver con `KeyboardAvoidingView` subía el CTA “Guardar producto”, en contra del layout del mock (el botón vive al final del form).
 
 **Corrección:** el CTA se dejó en el `ScrollView`. Al abrir el teclado se agrega padding inferior y, si el foco está en Descripción, se mide el bloque y se scrollea hasta que el campo completo quede por encima del teclado. `keyboardDismissMode="on-drag"` cierra el teclado al arrastrar.
+
+## Pantallas de categorías
+
+- Prompt: implementar categorías y productos por categoría con código sencillo,
+  servicios existentes y navegación por id.
+- Error de la IA: indicó importar useFocusEffect desde
+  @react-navigation/native siguiendo una regla desactualizada de AGENTS.md.
+  Primero faltaba el módulo y, al instalarlo, falló el contexto de navegación.
+- Corrección: importar useFocusEffect desde expo-router para SDK 58,
+  retirar la dependencia innecesaria.
+## Integración visual de categorías
+
+- Prompt: implementar la presentación de categorías según docs/design.md
+  y docs/ui-preview.html, con componentes
+  compartidos del grupo.
+- Implementación: grilla de categorías de dos columnas, colores desde
+  colors.ts y uso de ProductCard para los productos por categoría.
+  Se integraron Loading y ErrorMessage sin modificar sus archivos.
+- Validación: TypeScript sin errores y navegación desde categorías
+  hasta seleccionar un producto probada en Expo Go.
+- Pendientes: revisar el detalle, que queda en blanco tanto desde
+  Productos como desde Categorías, y adaptar los textos de los
+  componentes compartidos para categorías.
