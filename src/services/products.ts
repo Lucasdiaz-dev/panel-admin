@@ -6,6 +6,8 @@ export type ProductListParams = {
   offset?: number;
   limit?: number;
   title?: string;
+  priceMin?: number;
+  priceMax?: number;
   categoryId?: number;
 };
 
@@ -14,6 +16,8 @@ function toQuery(params: ProductListParams): string {
   if (params.offset != null) search.set('offset', String(params.offset));
   if (params.limit != null) search.set('limit', String(params.limit));
   if (params.title) search.set('title', params.title);
+  if (params.priceMin != null) search.set('price_min', String(params.priceMin));
+  if (params.priceMax != null) search.set('price_max', String(params.priceMax));
   if (params.categoryId != null) search.set('categoryId', String(params.categoryId));
   const query = search.toString();
   return query ? `?${query}` : '';
