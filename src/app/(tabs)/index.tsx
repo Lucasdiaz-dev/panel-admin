@@ -262,17 +262,11 @@ export default function ProductListScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       <Tabs.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <View accessibilityElementsHidden style={styles.iconButton}>
-          <View style={styles.menuLines}>
-            <View style={styles.menuLineLong} />
-            <View style={styles.menuLineLong} />
-            <View style={styles.menuLineShort} />
-          </View>
-        </View>
+        <View style={styles.headerSpacer} />
 
         <Text style={styles.brand}>PANEL</Text>
 
@@ -401,18 +395,9 @@ const styles = StyleSheet.create({
   iconButtonPressed: {
     opacity: 0.65,
   },
-  menuLines: {
-    gap: 4,
-  },
-  menuLineLong: {
-    backgroundColor: colors.text,
-    height: 2,
-    width: 16,
-  },
-  menuLineShort: {
-    backgroundColor: colors.text,
-    height: 2,
-    width: 10,
+  headerSpacer: {
+    height: 40,
+    width: 40,
   },
   brand: {
     color: colors.text,

@@ -1,56 +1,93 @@
-# Welcome to your Expo app 👋
+# Panel admin — Catálogo Platzi
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+TP Final · Unidad 5 · Ingeniería de Software II — IES Santa Fe (N° 9233)
 
-## Get started
+**Propuesta elegida:** Propuesta 4 — Panel de administración de catálogo sobre la [Platzi Fake Store API](https://fakeapi.platzi.com).
 
-1. Install dependencies
+App móvil (Expo + Expo Router + TypeScript) para recorrer productos con filtros y paginación, verlos por categoría y crear, editar y eliminar productos del grupo. Todo producto que creamos lleva el prefijo `**[G3]**` en el título; Editar y Eliminar solo aparecen en esos productos.
 
-   ```bash
-   npm install
-   ```
+## Integrantes
 
-2. Start the app
+- Lucas Díaz
+- Felipe Florio
+- Matias Vallejos
+- Luciano Lopez
 
-   ```bash
-   npx expo start
-   ```
+## Cómo ejecutarlo
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Requisitos: Node.js 20 o superior y la app **Expo Go** (compatible con SDK 58) en el celular.
 
 ```bash
-npm run reset-project
+git clone https://github.com/Lucasdiaz-dev/panel-admin.git
+cd panel-admin
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Escaneá el QR con Expo Go (Android) o con la cámara (iOS). El celular y la compu tienen que estar en la misma red; si no, usá `npx expo start --tunnel`.
 
-### Other setup steps
+Chequeos:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npx tsc --noEmit
+npx expo lint
+```
 
-## Learn more
+La API es pública y se reinicia cada tanto: los productos creados pueden desaparecer sin que sea un error de la app.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Capturas
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Capturas tomadas en iPhone con Expo Go.
 
-## Join the community
+| 1. Productos                                | 1. Productos — "Sólo míos"                                                    | 2. Categorías                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| ![Productos](docs/screenshots/products.png) | ![Productos filtrados con Sólo míos](docs/screenshots/products-only-mine.png) | ![Categorías](docs/screenshots/categories.jpg) |
 
-Join our community of developers creating universal apps.
+| 3. Productos por categoría                                         | 4. Detalle de producto                                      |
+| ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| ![Productos por categoría](docs/screenshots/category-products.jpg) | ![Detalle de producto](docs/screenshots/product-detail.png) |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+| 5. Alta                                             | 5. Edición                                            |
+| --------------------------------------------------- | ----------------------------------------------------- |
+| ![Nuevo producto](docs/screenshots/product-new.png) | ![Editar producto](docs/screenshots/product-edit.png) |
+
+## Estructura de carpetas
+
+```
+src/app/         pantallas y layouts (Expo Router): (tabs) Productos y Categorías, category/[id], product/[id], product/new, product/edit/[id]
+src/components/  componentes reutilizables con props tipadas: ProductCard, ProductForm, Filters, ImageCarousel, ErrorMessage, Loading, FormHeader, TabBarIcon
+src/services/    toda la comunicación HTTP: http.ts (fetch, res.ok y mensaje de error del servidor), products.ts, categories.ts
+src/types/       Product (lo que se lee, con category objeto) y ProductInput (lo que se envía, con categoryId)
+src/constants/   colores, URL base de la API y prefijo del grupo en un solo lugar
+docs/            diseño (design.md, ui-preview.html) y bitácora de IA (ia.md)
+```
+
+Las pantallas no llaman a `fetch`: piden los datos a `services/`, que verifica `res.ok` y lanza el `message` que devuelve la API. Después de crear, editar o eliminar, las pantallas vuelven a pedir los datos con `useFocusEffect` en lugar de modificar listas locales.
+
+## Uso de IA
+
+### Herramientas
+
+- **Cursor** (agente con modelos Claude) para generar, integrar y revisar código dentro del proyecto.
+- **ChatGPT** para consultas, generación de código y resolución de dudas durante el desarrollo.
+- Documentación oficial de Expo SDK 58 para verificar las APIs que proponía la IA antes de usarlas.
+
+### Prompts más importantes
+
+1. "Implementá la lista de productos con paginación offset/limit, filtros de texto, precio y categoría, y el interruptor 'Sólo míos'. Si cambia un filtro, la paginación vuelve a 0 y se reemplaza la lista. Respetá `AGENTS.md`."
+2. "Implementá el detalle de producto según la segunda pantalla de `docs/ui-preview.html`: carrusel de imágenes con placeholder, precio, categoría tocable y descripción. Editar y Eliminar solo si el título tiene el prefijo del grupo."
+3. "Armá un único `ProductForm` para alta y edición. El form no muestra el prefijo; `services/` lo agrega en POST/PUT solo si falta. El body usa `ProductInput` con `categoryId`."
+4. "Hidratá las pills de categoría del formulario con `getCategories()` y el tipo `Category` de la API."
+5. "Agregá validación al formulario: título, precio numérico ≥ 0, descripción, categoría y al menos una URL, con el error debajo de cada campo. Después de guardar o eliminar mostrá un aviso y volvé a una pantalla coherente."
+
+### Errores de la IA y cómo los corregimos
+
+**1. `useFocusEffect` importado del paquete equivocado.** La IA lo importó desde `@react-navigation/native`. Ese paquete no estaba instalado y, al instalarlo, la app mostró `Couldn't find a navigation object` porque creaba un contexto de navegación separado. Lo corregimos verificando la documentación de Expo Router 58, importando `useFocusEffect` desde `expo-router` y quitando la dependencia.
+
+**2. Botón Reintentar que no reintentaba.** La IA hizo que `Reintentar` solo incrementara un estado auxiliar, esperando que `useFocusEffect` volviera a correr. Con la conexión recuperada, el botón no hacía ninguna petición nueva. Lo corregimos extrayendo la carga a una función que se llama tanto al enfocar la pantalla como al tocar `Reintentar`, e ignorando respuestas de pedidos anteriores.
+
+**3. Formulario sin validación.** El `ProductForm` generado mandaba el POST/PUT con campos vacíos o precio no numérico y dependía del 400 del servidor, cuando la consigna (R5) pide validar antes de enviar. Agregamos validación de título, precio, descripción, categoría y URL `https://`, con el mensaje debajo de cada campo.
+
+**4. Categorías sucias en el selector.** La IA mostró todas las categorías del endpoint público, que incluye decenas de nombres de prueba (`Electronics from Config-<uuid>`, sufijos aleatorios). Normalizamos los nombres, descartamos los de prueba y deduplicamos; el body sigue enviando `categoryId`.
+
+Más detalle de cada caso en [`docs/ia.md`](docs/ia.md).

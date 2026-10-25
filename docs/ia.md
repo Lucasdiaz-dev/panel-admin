@@ -63,3 +63,9 @@
 - Qué falló: el navegador integrado bloqueó abrir el HTML local mediante file://. Se leyó su código como referencia; la validación visual debe realizarse sobre la app ejecutándose.
 - Validación: ver el resultado de los chequeos en la entrega; la prueba en un teléfono con Expo Go debe completarse antes de abrir el PR.
 - Resultado: TypeScript pasó después de integrar main. Lint no se pudo completar: falta configuración y la preparación automática falló por conexión. Expo inició en localhost:8081, pero la automatización del navegador agotó el tiempo de espera; no se confirmó visualmente ni en Expo Go.
+
+## Correcciones de la entrega
+
+- Prompt: validar el formulario (título, precio numérico ≥ 0, descripción, categoría y al menos una URL) con el error debajo de cada campo; agregar Eliminar en el detalle solo para productos del grupo; mostrar un Alert después de guardar o eliminar; reemplazar la tab bar nativa por la del diseño.
+- Qué falló: el `ProductForm` generado por la IA no validaba nada y dependía del 400 del servidor, en contra de R5. Además, eliminar desde Editar hacía `router.back()` y dejaba al usuario en el detalle de un producto que ya no existía.
+- Corrección: `validate()` en `ProductForm` corre antes de `onSubmit` y guarda un error por campo, que se borra cuando el usuario edita ese campo. Eliminar desde Editar vuelve dos pantallas (`router.dismiss(2)`) y el detalle tiene su propio botón Eliminar con confirmación. La tab bar usa íconos circulares (`TabBarIcon`) sin labels, como `docs/ui-preview.html`.

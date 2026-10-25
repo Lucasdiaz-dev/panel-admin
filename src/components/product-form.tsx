@@ -64,6 +64,52 @@ function usableCategories(categories: Category[]): Category[] {
   return [...byKey.values()].sort((a, b) => a.id - b.id);
 }
 
+const MIN_TITLE_LENGTH = 3;
+const MIN_DESCRIPTION_LENGTH = 10;
+
+type FormField = "imageUrl" | "title" | "price" | "categoryId" | "description";
+type FormErrors = Partial<Record<FormField, string>>;
+
+type FormValues = {
+  imageUrl: string;
+  title: string;
+  price: string;
+  categoryId: number | null;
+  description: string;
+};
+
+function parsePrice(value: string): number {
+  const normalized = value.trim().replace(",", ".");
+  return normalized === "" ? NaN : Number(normalized);
+}
+
+function validate(values: FormValues): FormErrors {
+  const errors: FormErrors = {};
+  const imageUrl = values.imageUrl.trim();
+  const title = values.title.trim();
+  const description = values.description.trim();
+  const price = parsePrice(values.price);
+
+  if (!imageUrl) errors.imageUrl = "Ingresá al menos una URL de imagen.";
+  else if (!/^https:\/\/\S+$/i.test(imageUrl)) errors.imageUrl = "La URL tiene que empezar con https://.";
+
+  if (!title) errors.title = "El título es obligatorio.";
+  else if (title.length < MIN_TITLE_LENGTH) errors.title = `El título debe tener al menos ${MIN_TITLE_LENGTH} caracteres.`;
+
+  if (values.price.trim() === "") errors.price = "El precio es obligatorio.";
+  else if (!Number.isFinite(price)) errors.price = "El precio tiene que ser un número.";
+  else if (price < 0) errors.price = "El precio no puede ser negativo.";
+
+  if (values.categoryId == null) errors.categoryId = "Elegí una categoría.";
+
+  if (!description) errors.description = "La descripción es obligatoria.";
+  else if (description.length < MIN_DESCRIPTION_LENGTH) {
+    errors.description = `La descripción debe tener al menos ${MIN_DESCRIPTION_LENGTH} caracteres.`;
+  }
+
+  return errors;
+}
+
 type ProductFormProps = {
   categories: Category[];
   onSubmit: (input: ProductInput) => void;
@@ -103,6 +149,7 @@ export function ProductForm({
     initialCategoryId ?? null,
   );
   const [imageFailed, setImageFailed] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [didHydrate, setDidHydrate] = useState(initialCategoryId != null);
   const [keyboardPad, setKeyboardPad] = useState(0);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -173,16 +220,25 @@ export function ProductForm({
 
   const busy = submitting || deleting;
 
+  function clearFieldError(field: FormField) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const { [field]: _removed, ...rest } = current;
+      return rest;
+    });
+  }
+
   function handleSave() {
     if (busy) return;
-    if (categoryId == null) return;
-    const parsedPrice = Number(price.replace(",", "."));
+    const errors = validate({ imageUrl, title, price, categoryId, description });
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0 || categoryId == null) return;
     onSubmit({
       title: title.trim(),
-      price: parsedPrice,
+      price: parsePrice(price),
       description: description.trim(),
       categoryId,
-      images: trimmedUrl ? [trimmedUrl] : [],
+      images: [trimmedUrl],
     });
   }
 
@@ -213,34 +269,47 @@ export function ProductForm({
         <Text style={styles.label}>Imagen</Text>
         <TextInput
           value={imageUrl}
-          onChangeText={setImageUrl}
-          style={styles.input}
+          onChangeText={(value) => {
+            setImageUrl(value);
+            clearFieldError("imageUrl");
+          }}
+          style={[styles.input, fieldErrors.imageUrl && styles.inputInvalid]}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
+          placeholder="https://..."
           placeholderTextColor={colors.textMuted}
         />
+        {fieldErrors.imageUrl ? <Text style={styles.fieldError}>{fieldErrors.imageUrl}</Text> : null}
       </View>
 
       <View style={styles.field}>
         <Text style={styles.label}>Título</Text>
         <TextInput
           value={title}
-          onChangeText={setTitle}
-          style={styles.input}
+          onChangeText={(value) => {
+            setTitle(value);
+            clearFieldError("title");
+          }}
+          style={[styles.input, fieldErrors.title && styles.inputInvalid]}
           placeholderTextColor={colors.textMuted}
         />
+        {fieldErrors.title ? <Text style={styles.fieldError}>{fieldErrors.title}</Text> : null}
       </View>
 
       <View style={styles.field}>
         <Text style={styles.label}>Precio</Text>
         <TextInput
           value={price}
-          onChangeText={setPrice}
-          style={styles.input}
+          onChangeText={(value) => {
+            setPrice(value);
+            clearFieldError("price");
+          }}
+          style={[styles.input, fieldErrors.price && styles.inputInvalid]}
           keyboardType="decimal-pad"
           placeholderTextColor={colors.textMuted}
         />
+        {fieldErrors.price ? <Text style={styles.fieldError}>{fieldErrors.price}</Text> : null}
       </View>
 
       <View style={styles.field}>
@@ -251,7 +320,10 @@ export function ProductForm({
             return (
               <Pressable
                 key={category.id}
-                onPress={() => setCategoryId(category.id)}
+                onPress={() => {
+                  setCategoryId(category.id);
+                  clearFieldError("categoryId");
+                }}
                 style={[
                   styles.pill,
                   selected ? styles.pillSelected : styles.pillOutline,
@@ -268,14 +340,18 @@ export function ProductForm({
             );
           })}
         </View>
+        {fieldErrors.categoryId ? <Text style={styles.fieldError}>{fieldErrors.categoryId}</Text> : null}
       </View>
 
       <View ref={descriptionFieldRef} style={styles.field} collapsable={false}>
         <Text style={styles.label}>Descripción</Text>
         <TextInput
           value={description}
-          onChangeText={setDescription}
-          style={[styles.input, styles.area]}
+          onChangeText={(value) => {
+            setDescription(value);
+            clearFieldError("description");
+          }}
+          style={[styles.input, styles.area, fieldErrors.description && styles.inputInvalid]}
           multiline
           textAlignVertical="top"
           placeholderTextColor={colors.textMuted}
@@ -286,6 +362,7 @@ export function ProductForm({
             descriptionFocused.current = false;
           }}
         />
+        {fieldErrors.description ? <Text style={styles.fieldError}>{fieldErrors.description}</Text> : null}
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -295,7 +372,7 @@ export function ProductForm({
         onPress={handleSave}
         disabled={busy}
       >
-        <Text style={styles.ctaText}>Guardar producto</Text>
+        <Text style={styles.ctaText}>{submitting ? "Guardando..." : "Guardar producto"}</Text>
       </Pressable>
 
       {onDelete ? (
@@ -352,6 +429,16 @@ const styles = StyleSheet.create({
   },
   area: {
     minHeight: 88,
+  },
+  inputInvalid: {
+    borderWidth: 1,
+    borderColor: colors.text,
+  },
+  fieldError: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 16,
   },
   pills: {
     flexDirection: "row",
