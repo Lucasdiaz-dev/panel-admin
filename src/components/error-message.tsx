@@ -5,12 +5,17 @@ import { colors } from '@/constants/colors';
 type ErrorMessageProps = {
   message: string;
   onRetry: () => void;
+  title?: string;
 };
 
-export function ErrorMessage({ message, onRetry }: ErrorMessageProps) {
+export function ErrorMessage({
+  message,
+  onRetry,
+  title = 'No pudimos cargar los productos',
+}: ErrorMessageProps) {
   return (
     <View accessibilityRole="alert" style={styles.container}>
-      <Text style={styles.title}>No pudimos cargar los productos</Text>
+      <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       <Pressable
         accessibilityRole="button"

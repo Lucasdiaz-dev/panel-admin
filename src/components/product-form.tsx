@@ -260,6 +260,8 @@ export function ProductForm({
   const canRemoveImage = imageFields.length > 1;
 
   const busy = submitting || deleting;
+  const hasCategories = visibleCategories.length > 0;
+  const saveDisabled = busy || !hasCategories;
 
   function clearFieldError(field: FormField) {
     setFieldErrors((current) => {
@@ -292,7 +294,7 @@ export function ProductForm({
   }
 
   function handleSave() {
-    if (busy) return;
+    if (saveDisabled) return;
     const errors = validate({ imageFields, title, price, categoryId, description });
     setFieldErrors(errors.fields);
     setImageErrors(errors.images);
@@ -430,6 +432,11 @@ export function ProductForm({
             );
           })}
         </View>
+        {!hasCategories ? (
+          <Text style={styles.fieldError}>
+            No hay categorías disponibles. Sin una categoría no se puede guardar el producto.
+          </Text>
+        ) : null}
         {fieldErrors.categoryId ? <Text style={styles.fieldError}>{fieldErrors.categoryId}</Text> : null}
       </View>
 
@@ -458,9 +465,11 @@ export function ProductForm({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable
-        style={[styles.cta, busy && styles.ctaDisabled]}
+        style={[styles.cta, saveDisabled && styles.ctaDisabled]}
         onPress={handleSave}
-        disabled={busy}
+        disabled={saveDisabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: saveDisabled }}
       >
         <Text style={styles.ctaText}>{submitting ? "Guardando..." : "Guardar producto"}</Text>
       </Pressable>

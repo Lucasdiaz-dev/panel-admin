@@ -77,6 +77,7 @@ export default function CategoryListScreen() {
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
         <ScreenHeader title="Categorías" />
         <ErrorMessage
+          title="No pudimos cargar las categorías"
           message={error}
           onRetry={() => setRetry((previous) => previous + 1)}
         />

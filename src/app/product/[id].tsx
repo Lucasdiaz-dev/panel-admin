@@ -83,7 +83,7 @@ export default function ProductDetailScreen() {
           <View style={styles.skeletonTitle} />
         </View>
       ) : error ? (
-        <ErrorMessage message={error} onRetry={() => setAttempt(value => value + 1)} />
+        <ErrorMessage title="No pudimos cargar el producto" message={error} onRetry={() => setAttempt(value => value + 1)} />
       ) : product ? (
         <>
           <ScrollView contentContainerStyle={styles.scrollContent}>

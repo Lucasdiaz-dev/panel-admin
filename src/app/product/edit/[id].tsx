@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import { ErrorMessage } from '@/components/error-message';
 import { FormHeader } from '@/components/form-header';
 import { ProductForm } from '@/components/product-form';
 import { colors } from '@/constants/colors';
@@ -21,55 +22,58 @@ export default function EditProductScreen() {
   const idParam = Array.isArray(rawId) ? rawId[0] : rawId;
   const productId = Number(idParam);
 
+  const isValidId = Number.isFinite(productId);
+
   const [product, setProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(isValidId);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const loadRequestId = useRef(0);
+
+  const loadData = useCallback(async () => {
+    if (!isValidId) return;
+    const requestId = loadRequestId.current + 1;
+    loadRequestId.current = requestId;
+    setLoading(true);
+    setLoadError(null);
+
+    try {
+      const [nextProduct, nextCategories] = await Promise.all([
+        getProduct(productId),
+        getCategories(),
+      ]);
+      if (requestId !== loadRequestId.current) return;
+      setProduct(nextProduct);
+      setCategories(nextCategories);
+    } catch (caught: unknown) {
+      if (requestId !== loadRequestId.current) return;
+      setLoadError(errorMessage(caught));
+    } finally {
+      if (requestId === loadRequestId.current) setLoading(false);
+    }
+  }, [isValidId, productId]);
 
   useEffect(() => {
-    if (!Number.isFinite(productId)) {
-      setLoading(false);
-      setError('Producto inválido.');
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    Promise.all([getProduct(productId), getCategories()])
-      .then(([nextProduct, nextCategories]) => {
-        if (cancelled) return;
-        setProduct(nextProduct);
-        setCategories(nextCategories);
-      })
-      .catch((caught: unknown) => {
-        if (cancelled) return;
-        setError(errorMessage(caught));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setLoading(false);
-      });
-
+    void loadData();
     return () => {
-      cancelled = true;
+      loadRequestId.current += 1;
     };
-  }, [productId]);
+  }, [loadData]);
 
   async function handleSubmit(input: ProductInput) {
     if (submitting || deleting) return;
     if (!product || !hasGroupPrefix(product.title)) return;
     setSubmitting(true);
-    setError(null);
+    setActionError(null);
     try {
       await updateProduct(product.id, input);
       router.back();
       Alert.alert('Producto guardado', 'Los cambios se guardaron correctamente.');
     } catch (caught: unknown) {
-      setError(errorMessage(caught));
+      setActionError(errorMessage(caught));
     } finally {
       setSubmitting(false);
     }
@@ -78,14 +82,14 @@ export default function EditProductScreen() {
   async function runDelete() {
     if (!product || !hasGroupPrefix(product.title)) return;
     setDeleting(true);
-    setError(null);
+    setActionError(null);
     try {
       await deleteProduct(product.id);
       // Editar se abre desde el detalle: volver una sola vez caería en el producto borrado.
       router.dismiss(2);
       Alert.alert('Producto eliminado', 'El producto se eliminó correctamente.');
     } catch (caught: unknown) {
-      setError(errorMessage(caught));
+      setActionError(errorMessage(caught));
     } finally {
       setDeleting(false);
     }
@@ -106,12 +110,19 @@ export default function EditProductScreen() {
   return (
     <View style={styles.container}>
       <FormHeader title="Editar producto" />
+      {!isValidId ? <Text style={styles.status}>Producto inválido.</Text> : null}
       {loading ? <Text style={styles.status}>Cargando...</Text> : null}
-      {!loading && error && !canEdit ? <Text style={styles.status}>{error}</Text> : null}
-      {!loading && product != null && !canEdit ? (
+      {!loading && loadError ? (
+        <ErrorMessage
+          title="No pudimos cargar el producto"
+          message={loadError}
+          onRetry={() => void loadData()}
+        />
+      ) : null}
+      {!loading && !loadError && product != null && !canEdit ? (
         <Text style={styles.status}>No podés editar este producto.</Text>
       ) : null}
-      {!loading && canEdit ? (
+      {!loading && !loadError && canEdit ? (
         <ProductForm
           categories={categories}
           onSubmit={handleSubmit}
@@ -123,7 +134,7 @@ export default function EditProductScreen() {
           initialDescription={product.description}
           initialImages={product.images}
           initialCategoryId={product.category.id}
-          error={error}
+          error={actionError}
         />
       ) : null}
     </View>
