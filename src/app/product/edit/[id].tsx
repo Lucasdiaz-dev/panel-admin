@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
 import { ErrorMessage } from '@/components/error-message';
 import { FormHeader } from '@/components/form-header';
@@ -111,7 +111,11 @@ export default function EditProductScreen() {
     <View style={styles.container}>
       <FormHeader title="Editar producto" />
       {!isValidId ? <Text style={styles.status}>Producto inválido.</Text> : null}
-      {loading ? <Text style={styles.status}>Cargando...</Text> : null}
+      {loading ? (
+        <View style={styles.loader} accessibilityLabel="Cargando producto">
+          <ActivityIndicator size="large" color={colors.text} />
+        </View>
+      ) : null}
       {!loading && loadError ? (
         <ErrorMessage
           title="No pudimos cargar el producto"
@@ -145,6 +149,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   status: {
     color: colors.textMuted,

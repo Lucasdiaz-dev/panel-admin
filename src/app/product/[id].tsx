@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorMessage } from '@/components/error-message';
 import ImageCarousel from '@/components/image-carousel';
@@ -112,7 +112,10 @@ export default function ProductDetailScreen() {
             </Pressable>
             {isMine && (
               <Pressable accessibilityRole="button" disabled={deleting} onPress={confirmDelete} style={[styles.ctaGhost, deleting && styles.ctaDisabled]}>
-                <Text style={styles.ctaGhostText}>{deleting ? 'Eliminando...' : 'Eliminar'}</Text>
+                <View style={styles.ctaContent}>
+                  {deleting && <ActivityIndicator size="small" color={colors.text} />}
+                  <Text style={styles.ctaGhostText}>{deleting ? 'Eliminando...' : 'Eliminar'}</Text>
+                </View>
               </Pressable>
             )}
           </View>
@@ -147,6 +150,7 @@ const styles = StyleSheet.create({
   cta: { minHeight: 52, borderRadius: 999, backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   ctaText: { color: colors.inverse, fontSize: 14, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   ctaDisabled: { opacity: 0.5 },
+  ctaContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   ctaGhost: { minHeight: 52, borderRadius: 999, borderWidth: 1, borderColor: colors.text, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   ctaGhostText: { color: colors.text, fontSize: 14, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   skeletonHero: { height: 280, borderRadius: 28, backgroundColor: colors.surface },

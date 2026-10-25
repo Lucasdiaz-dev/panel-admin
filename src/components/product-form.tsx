@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   Pressable,
@@ -469,9 +470,12 @@ export function ProductForm({
         onPress={handleSave}
         disabled={saveDisabled}
         accessibilityRole="button"
-        accessibilityState={{ disabled: saveDisabled }}
+        accessibilityState={{ disabled: saveDisabled, busy: submitting }}
       >
-        <Text style={styles.ctaText}>{submitting ? "Guardando..." : "Guardar producto"}</Text>
+        <View style={styles.ctaContent}>
+          {submitting ? <ActivityIndicator size="small" color={colors.inverse} /> : null}
+          <Text style={styles.ctaText}>{submitting ? "Guardando..." : "Guardar producto"}</Text>
+        </View>
       </Pressable>
 
       {onDelete ? (
@@ -479,8 +483,13 @@ export function ProductForm({
           style={[styles.ctaGhost, busy && styles.ctaDisabled]}
           onPress={onDelete}
           disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy, busy: deleting }}
         >
-          <Text style={styles.ctaGhostText}>Eliminar</Text>
+          <View style={styles.ctaContent}>
+            {deleting ? <ActivityIndicator size="small" color={colors.text} /> : null}
+            <Text style={styles.ctaGhostText}>{deleting ? "Eliminando..." : "Eliminar"}</Text>
+          </View>
         </Pressable>
       ) : null}
     </ScrollView>
@@ -627,6 +636,11 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: {
     opacity: 0.5,
+  },
+  ctaContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   ctaText: {
     fontSize: 14,

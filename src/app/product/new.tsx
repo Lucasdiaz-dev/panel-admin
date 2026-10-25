@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { ErrorMessage } from '@/components/error-message';
 import { FormHeader } from '@/components/form-header';
@@ -67,7 +67,11 @@ export default function NewProductScreen() {
   return (
     <View style={styles.container}>
       <FormHeader title="Nuevo producto" />
-      {loading ? <Text style={styles.status}>Cargando...</Text> : null}
+      {loading ? (
+        <View style={styles.loader} accessibilityLabel="Cargando categorías">
+          <ActivityIndicator size="large" color={colors.text} />
+        </View>
+      ) : null}
       {!loading && loadError ? (
         <ErrorMessage
           title="No pudimos cargar las categorías"
@@ -92,9 +96,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  status: {
-    color: colors.textMuted,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
