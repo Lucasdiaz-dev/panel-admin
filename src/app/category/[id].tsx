@@ -1,10 +1,12 @@
-import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorMessage } from '@/components/error-message';
 import { Loading } from '@/components/loading';
 import { ProductCard } from '@/components/product-card';
+import { ScreenHeader } from '@/components/screen-header';
 import { colors } from '@/constants/colors';
 import { getCategory, getProductsByCategory } from '@/services/categories';
 import type { Product } from '@/types/product';
@@ -67,9 +69,14 @@ export default function CategoryProductsScreen() {
     setRetry((previous) => previous + 1);
   }
 
+  function goBack() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/categories');
+  }
+
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: categoryName }} />
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+      <ScreenHeader title={categoryName} onBack={goBack} compact />
 
       {loading ? (
         <Loading />
@@ -77,6 +84,7 @@ export default function CategoryProductsScreen() {
         <ErrorMessage message={error} onRetry={handleRetry} />
       ) : (
         <FlatList
+          style={styles.container}
           contentContainerStyle={styles.list}
           columnWrapperStyle={styles.row}
           numColumns={2}
@@ -100,7 +108,7 @@ export default function CategoryProductsScreen() {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -110,7 +118,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 32,
     gap: 24,
   },
   row: {

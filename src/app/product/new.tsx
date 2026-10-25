@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { FormHeader } from '@/components/form-header';
 import { ProductForm } from '@/components/product-form';
@@ -46,6 +46,7 @@ export default function NewProductScreen() {
     try {
       await createProduct(input);
       router.back();
+      Alert.alert('Producto guardado', 'El producto se creó correctamente.');
     } catch (caught: unknown) {
       setError(errorMessage(caught));
     } finally {

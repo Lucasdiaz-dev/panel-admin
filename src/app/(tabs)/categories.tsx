@@ -9,8 +9,11 @@ import {
   View,
 } from 'react-native';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { ErrorMessage } from '@/components/error-message';
 import { Loading } from '@/components/loading';
+import { ScreenHeader } from '@/components/screen-header';
 import { colors } from '@/constants/colors';
 import { getCategories } from '@/services/categories';
 import type { Category } from '@/types/category';
@@ -62,70 +65,75 @@ export default function CategoryListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+        <ScreenHeader title="Categorías" />
         <Loading />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+        <ScreenHeader title="Categorías" />
         <ErrorMessage
           message={error}
           onRetry={() => setRetry((previous) => previous + 1)}
         />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={styles.list}
-      numColumns={2}
-      columnWrapperStyle={styles.row}
-      data={categories}
-      keyExtractor={(item) => String(item.id)}
-      ListEmptyComponent={
-        <Text style={styles.message}>No hay categorías disponibles.</Text>
-      }
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.card}
-          accessibilityRole="button"
-          accessibilityLabel={`Ver productos de ${item.name}`}
-          onPress={() =>
-            router.push({
-              pathname: '/category/[id]',
-              params: { id: String(item.id) },
-            })
-          }
-        >
-          {!item.image || failedImages.includes(item.image) ? (
-            <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>Sin imagen</Text>
-            </View>
-          ) : (
-            <Image
-              source={{ uri: item.image }}
-              style={styles.image}
-              onError={() =>
-                setFailedImages((previous) =>
-                  previous.includes(item.image)
-                    ? previous
-                    : [...previous, item.image],
-                )
-              }
-            />
-          )}
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+      <ScreenHeader title="Categorías" />
+      <FlatList
+        style={styles.container}
+        contentContainerStyle={styles.list}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        data={categories}
+        keyExtractor={(item) => String(item.id)}
+        ListEmptyComponent={
+          <Text style={styles.message}>No hay categorías disponibles.</Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            style={styles.card}
+            accessibilityRole="button"
+            accessibilityLabel={`Ver productos de ${item.name}`}
+            onPress={() =>
+              router.push({
+                pathname: '/category/[id]',
+                params: { id: String(item.id) },
+              })
+            }
+          >
+            {!item.image || failedImages.includes(item.image) ? (
+              <View style={styles.placeholder}>
+                <Text style={styles.placeholderText}>Sin imagen</Text>
+              </View>
+            ) : (
+              <Image
+                source={{ uri: item.image }}
+                style={styles.image}
+                onError={() =>
+                  setFailedImages((previous) =>
+                    previous.includes(item.image)
+                      ? previous
+                      : [...previous, item.image],
+                  )
+                }
+              />
+            )}
 
-          <Text style={styles.name} numberOfLines={2}>
-            {item.name}
-          </Text>
-        </Pressable>
-      )}
-    />
+            <Text style={styles.name} numberOfLines={2}>
+              {item.name}
+            </Text>
+          </Pressable>
+        )}
+      />
+    </SafeAreaView>
   );
 }
 
@@ -135,7 +143,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 24,
     gap: 12,
   },
   row: {

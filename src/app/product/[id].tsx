@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorMessage } from '@/components/error-message';
 import ImageCarousel from '@/components/image-carousel';
 import { colors } from '@/constants/colors';
 import { getDisplayTitle, hasGroupPrefix } from '@/constants/group';
-import { getProduct } from '@/services/products';
+import { deleteProduct, getProduct } from '@/services/products';
 import type { Product } from '@/types/product';
 
 export default function ProductDetailScreen() {
@@ -17,6 +17,7 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const [expanded, setExpanded] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -40,6 +41,28 @@ export default function ProductDetailScreen() {
   const goBack = () => router.canGoBack() ? router.back() : router.replace('/');
   const viewCategory = () => {
     if (product) router.push({ pathname: '/category/[id]', params: { id: String(product.category.id) } });
+  };
+
+  const runDelete = async () => {
+    if (!product || !hasGroupPrefix(product.title)) return;
+    setDeleting(true);
+    try {
+      await deleteProduct(product.id);
+      goBack();
+      Alert.alert('Producto eliminado', 'El producto se eliminó correctamente.');
+    } catch (reason) {
+      Alert.alert('No se pudo eliminar', reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (deleting || !product || !hasGroupPrefix(product.title)) return;
+    Alert.alert('Eliminar producto', '¿Seguro que querés eliminarlo?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => void runDelete() },
+    ]);
   };
 
   return (
@@ -84,9 +107,14 @@ export default function ProductDetailScreen() {
             </View>
           </ScrollView>
           <View style={styles.footer}>
-            <Pressable accessibilityRole="button" onPress={() => isMine ? router.push({ pathname: '/product/edit/[id]', params: { id: String(product.id) } }) : viewCategory()} style={styles.cta}>
+            <Pressable accessibilityRole="button" disabled={deleting} onPress={() => isMine ? router.push({ pathname: '/product/edit/[id]', params: { id: String(product.id) } }) : viewCategory()} style={[styles.cta, deleting && styles.ctaDisabled]}>
               <Text style={styles.ctaText}>{isMine ? 'Editar producto' : 'Ver categoría'}</Text>
             </Pressable>
+            {isMine && (
+              <Pressable accessibilityRole="button" disabled={deleting} onPress={confirmDelete} style={[styles.ctaGhost, deleting && styles.ctaDisabled]}>
+                <Text style={styles.ctaGhostText}>{deleting ? 'Eliminando...' : 'Eliminar'}</Text>
+              </Pressable>
+            )}
           </View>
         </>
       ) : null}
@@ -115,9 +143,12 @@ const styles = StyleSheet.create({
   label: { color: colors.text, fontSize: 12, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase' },
   chevron: { color: colors.text, fontSize: 20 },
   description: { color: colors.textMuted, fontSize: 13, lineHeight: 20, marginTop: 8 },
-  footer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20 },
+  footer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20, gap: 12 },
   cta: { minHeight: 52, borderRadius: 999, backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   ctaText: { color: colors.inverse, fontSize: 14, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  ctaDisabled: { opacity: 0.5 },
+  ctaGhost: { minHeight: 52, borderRadius: 999, borderWidth: 1, borderColor: colors.text, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  ctaGhostText: { color: colors.text, fontSize: 14, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   skeletonHero: { height: 280, borderRadius: 28, backgroundColor: colors.surface },
   skeletonPrice: { width: 120, height: 32, borderRadius: 12, backgroundColor: colors.surface },
   skeletonTitle: { height: 24, borderRadius: 12, backgroundColor: colors.surface },

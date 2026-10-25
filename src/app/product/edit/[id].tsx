@@ -67,6 +67,7 @@ export default function EditProductScreen() {
     try {
       await updateProduct(product.id, input);
       router.back();
+      Alert.alert('Producto guardado', 'Los cambios se guardaron correctamente.');
     } catch (caught: unknown) {
       setError(errorMessage(caught));
     } finally {
@@ -80,7 +81,9 @@ export default function EditProductScreen() {
     setError(null);
     try {
       await deleteProduct(product.id);
-      router.back();
+      // Editar se abre desde el detalle: volver una sola vez caería en el producto borrado.
+      router.dismiss(2);
+      Alert.alert('Producto eliminado', 'El producto se eliminó correctamente.');
     } catch (caught: unknown) {
       setError(errorMessage(caught));
     } finally {
@@ -94,7 +97,7 @@ export default function EditProductScreen() {
 
     Alert.alert('Eliminar producto', '¿Seguro que querés eliminarlo?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', onPress: () => void runDelete() },
+      { text: 'Eliminar', style: 'destructive', onPress: () => void runDelete() },
     ]);
   }
 
