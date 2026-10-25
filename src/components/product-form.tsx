@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   Pressable,
@@ -9,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SymbolView } from "expo-symbols";
 
 import { colors } from "@/constants/colors";
 import { withoutGroupPrefix } from "@/constants/group";
@@ -67,31 +69,68 @@ function usableCategories(categories: Category[]): Category[] {
 const MIN_TITLE_LENGTH = 3;
 const MIN_DESCRIPTION_LENGTH = 10;
 
-type FormField = "imageUrl" | "title" | "price" | "categoryId" | "description";
+type FormField = "title" | "price" | "categoryId" | "description";
 type FormErrors = Partial<Record<FormField, string>>;
+type ImageErrors = Record<number, string>;
+
+type ImageField = {
+  id: number;
+  url: string;
+};
 
 type FormValues = {
-  imageUrl: string;
+  imageFields: ImageField[];
   title: string;
   price: string;
   categoryId: number | null;
   description: string;
 };
 
+type ValidationResult = {
+  fields: FormErrors;
+  images: ImageErrors;
+};
+
+let nextImageFieldId = 0;
+
+function createImageField(url = ""): ImageField {
+  nextImageFieldId += 1;
+  return { id: nextImageFieldId, url };
+}
+
+function toImageFields(urls: string[] | undefined): ImageField[] {
+  const filled = (urls ?? []).map((url) => url.trim()).filter(Boolean);
+  return filled.length > 0 ? filled.map((url) => createImageField(url)) : [createImageField()];
+}
+
 function parsePrice(value: string): number {
   const normalized = value.trim().replace(",", ".");
   return normalized === "" ? NaN : Number(normalized);
 }
 
-function validate(values: FormValues): FormErrors {
+function validateImages(imageFields: ImageField[]): ImageErrors {
+  const errors: ImageErrors = {};
+  const hasAnyUrl = imageFields.some((field) => field.url.trim() !== "");
+
+  if (!hasAnyUrl) {
+    errors[imageFields[0].id] = "Ingresá al menos una URL de imagen.";
+    return errors;
+  }
+
+  for (const field of imageFields) {
+    const url = field.url.trim();
+    if (!url) errors[field.id] = "Completá la URL o quitá este campo.";
+    else if (!/^https:\/\/\S+$/i.test(url)) errors[field.id] = "La URL tiene que empezar con https://.";
+  }
+
+  return errors;
+}
+
+function validate(values: FormValues): ValidationResult {
   const errors: FormErrors = {};
-  const imageUrl = values.imageUrl.trim();
   const title = values.title.trim();
   const description = values.description.trim();
   const price = parsePrice(values.price);
-
-  if (!imageUrl) errors.imageUrl = "Ingresá al menos una URL de imagen.";
-  else if (!/^https:\/\/\S+$/i.test(imageUrl)) errors.imageUrl = "La URL tiene que empezar con https://.";
 
   if (!title) errors.title = "El título es obligatorio.";
   else if (title.length < MIN_TITLE_LENGTH) errors.title = `El título debe tener al menos ${MIN_TITLE_LENGTH} caracteres.`;
@@ -107,7 +146,7 @@ function validate(values: FormValues): FormErrors {
     errors.description = `La descripción debe tener al menos ${MIN_DESCRIPTION_LENGTH} caracteres.`;
   }
 
-  return errors;
+  return { fields: errors, images: validateImages(values.imageFields) };
 }
 
 type ProductFormProps = {
@@ -119,7 +158,7 @@ type ProductFormProps = {
   initialTitle?: string;
   initialPrice?: number;
   initialDescription?: string;
-  initialImageUrl?: string;
+  initialImages?: string[];
   initialCategoryId?: number;
   error?: string | null;
 };
@@ -133,11 +172,11 @@ export function ProductForm({
   initialTitle,
   initialPrice,
   initialDescription,
-  initialImageUrl,
+  initialImages,
   initialCategoryId,
   error,
 }: ProductFormProps) {
-  const [imageUrl, setImageUrl] = useState(initialImageUrl ?? "");
+  const [imageFields, setImageFields] = useState<ImageField[]>(() => toImageFields(initialImages));
   const [title, setTitle] = useState(
     initialTitle != null ? withoutGroupPrefix(initialTitle) : "",
   );
@@ -150,6 +189,7 @@ export function ProductForm({
   );
   const [imageFailed, setImageFailed] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const [imageErrors, setImageErrors] = useState<ImageErrors>({});
   const [didHydrate, setDidHydrate] = useState(initialCategoryId != null);
   const [keyboardPad, setKeyboardPad] = useState(0);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -157,9 +197,11 @@ export function ProductForm({
   const descriptionFocused = useRef(false);
   const scrollY = useRef(0);
 
+  const previewUrl = imageFields.map((field) => field.url.trim()).find(Boolean) ?? "";
+
   useEffect(() => {
     setImageFailed(false);
-  }, [imageUrl]);
+  }, [previewUrl]);
 
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", (event) => {
@@ -192,7 +234,7 @@ export function ProductForm({
     setTitle(initialTitle != null ? withoutGroupPrefix(initialTitle) : "");
     setPrice(initialPrice != null ? String(initialPrice) : "");
     setDescription(initialDescription ?? "");
-    setImageUrl(initialImageUrl ?? "");
+    setImageFields(toImageFields(initialImages));
     setCategoryId(initialCategoryId ?? null);
     setDidHydrate(true);
   }, [
@@ -200,7 +242,7 @@ export function ProductForm({
     initialTitle,
     initialPrice,
     initialDescription,
-    initialImageUrl,
+    initialImages,
     initialCategoryId,
   ]);
 
@@ -215,10 +257,12 @@ export function ProductForm({
     setCategoryId(visibleCategories[0].id);
   }, [visibleCategories, categoryId]);
 
-  const trimmedUrl = imageUrl.trim();
-  const showPreview = trimmedUrl.length > 0 && !imageFailed;
+  const showPreview = previewUrl.length > 0 && !imageFailed;
+  const canRemoveImage = imageFields.length > 1;
 
   const busy = submitting || deleting;
+  const hasCategories = visibleCategories.length > 0;
+  const saveDisabled = busy || !hasCategories;
 
   function clearFieldError(field: FormField) {
     setFieldErrors((current) => {
@@ -228,17 +272,41 @@ export function ProductForm({
     });
   }
 
+  function clearImageError(id: number) {
+    setImageErrors((current) => {
+      if (!current[id]) return current;
+      const { [id]: _removed, ...rest } = current;
+      return rest;
+    });
+  }
+
+  function changeImageUrl(id: number, url: string) {
+    setImageFields((current) => current.map((field) => (field.id === id ? { ...field, url } : field)));
+    clearImageError(id);
+  }
+
+  function addImageField() {
+    setImageFields((current) => [...current, createImageField()]);
+  }
+
+  function removeImageField(id: number) {
+    setImageFields((current) => (current.length > 1 ? current.filter((field) => field.id !== id) : current));
+    clearImageError(id);
+  }
+
   function handleSave() {
-    if (busy) return;
-    const errors = validate({ imageUrl, title, price, categoryId, description });
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0 || categoryId == null) return;
+    if (saveDisabled) return;
+    const errors = validate({ imageFields, title, price, categoryId, description });
+    setFieldErrors(errors.fields);
+    setImageErrors(errors.images);
+    if (Object.keys(errors.fields).length > 0 || Object.keys(errors.images).length > 0) return;
+    if (categoryId == null) return;
     onSubmit({
       title: title.trim(),
       price: parsePrice(price),
       description: description.trim(),
       categoryId,
-      images: [trimmedUrl],
+      images: imageFields.map((field) => field.url.trim()),
     });
   }
 
@@ -257,7 +325,7 @@ export function ProductForm({
       <View style={styles.preview}>
         {showPreview ? (
           <Image
-            source={{ uri: trimmedUrl }}
+            source={{ uri: previewUrl }}
             style={styles.previewImage}
             resizeMode="cover"
             onError={() => setImageFailed(true)}
@@ -266,21 +334,46 @@ export function ProductForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Imagen</Text>
-        <TextInput
-          value={imageUrl}
-          onChangeText={(value) => {
-            setImageUrl(value);
-            clearFieldError("imageUrl");
-          }}
-          style={[styles.input, fieldErrors.imageUrl && styles.inputInvalid]}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          placeholder="https://..."
-          placeholderTextColor={colors.textMuted}
-        />
-        {fieldErrors.imageUrl ? <Text style={styles.fieldError}>{fieldErrors.imageUrl}</Text> : null}
+        <Text style={styles.label}>Imágenes</Text>
+        {imageFields.map((field, index) => (
+          <View key={field.id} style={styles.imageField}>
+            <View style={styles.imageRow}>
+              <TextInput
+                value={field.url}
+                onChangeText={(value) => changeImageUrl(field.id, value)}
+                style={[styles.input, styles.imageInput, imageErrors[field.id] && styles.inputInvalid]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="https://..."
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel={`URL de imagen ${index + 1}`}
+              />
+              <Pressable
+                onPress={() => removeImageField(field.id)}
+                disabled={!canRemoveImage}
+                accessibilityRole="button"
+                accessibilityLabel={`Quitar URL de imagen ${index + 1}`}
+                accessibilityState={{ disabled: !canRemoveImage }}
+                style={[styles.removeButton, !canRemoveImage && styles.removeButtonDisabled]}
+              >
+                <SymbolView
+                  name={{ ios: "xmark", android: "close", web: "close" }}
+                  size={14}
+                  tintColor={colors.text}
+                />
+              </Pressable>
+            </View>
+            {imageErrors[field.id] ? <Text style={styles.fieldError}>{imageErrors[field.id]}</Text> : null}
+          </View>
+        ))}
+        <Pressable
+          onPress={addImageField}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.addImageButton, pressed && styles.addImageButtonPressed]}
+        >
+          <Text style={styles.addImageText}>+ Agregar URL</Text>
+        </Pressable>
       </View>
 
       <View style={styles.field}>
@@ -340,6 +433,11 @@ export function ProductForm({
             );
           })}
         </View>
+        {!hasCategories ? (
+          <Text style={styles.fieldError}>
+            No hay categorías disponibles. Sin una categoría no se puede guardar el producto.
+          </Text>
+        ) : null}
         {fieldErrors.categoryId ? <Text style={styles.fieldError}>{fieldErrors.categoryId}</Text> : null}
       </View>
 
@@ -368,11 +466,16 @@ export function ProductForm({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable
-        style={[styles.cta, busy && styles.ctaDisabled]}
+        style={[styles.cta, saveDisabled && styles.ctaDisabled]}
         onPress={handleSave}
-        disabled={busy}
+        disabled={saveDisabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: saveDisabled, busy: submitting }}
       >
-        <Text style={styles.ctaText}>{submitting ? "Guardando..." : "Guardar producto"}</Text>
+        <View style={styles.ctaContent}>
+          {submitting ? <ActivityIndicator size="small" color={colors.inverse} /> : null}
+          <Text style={styles.ctaText}>{submitting ? "Guardando..." : "Guardar producto"}</Text>
+        </View>
       </Pressable>
 
       {onDelete ? (
@@ -380,8 +483,13 @@ export function ProductForm({
           style={[styles.ctaGhost, busy && styles.ctaDisabled]}
           onPress={onDelete}
           disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy, busy: deleting }}
         >
-          <Text style={styles.ctaGhostText}>Eliminar</Text>
+          <View style={styles.ctaContent}>
+            {deleting ? <ActivityIndicator size="small" color={colors.text} /> : null}
+            <Text style={styles.ctaGhostText}>{deleting ? "Eliminando..." : "Eliminar"}</Text>
+          </View>
         </Pressable>
       ) : null}
     </ScrollView>
@@ -429,6 +537,48 @@ const styles = StyleSheet.create({
   },
   area: {
     minHeight: 88,
+  },
+  imageField: {
+    gap: 8,
+  },
+  imageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  imageInput: {
+    flex: 1,
+  },
+  removeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  removeButtonDisabled: {
+    opacity: 0.4,
+  },
+  addImageButton: {
+    alignSelf: "flex-start",
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    justifyContent: "center",
+  },
+  addImageButtonPressed: {
+    opacity: 0.65,
+  },
+  addImageText: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.44,
+    textTransform: "uppercase",
+    color: colors.text,
   },
   inputInvalid: {
     borderWidth: 1,
@@ -486,6 +636,11 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: {
     opacity: 0.5,
+  },
+  ctaContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   ctaText: {
     fontSize: 14,

@@ -1,6 +1,6 @@
 import { Tabs, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorMessage } from '@/components/error-message';
@@ -332,7 +332,15 @@ export default function ProductListScreen() {
             hasMore || paginationError ? (
               <View style={styles.paginationFooter}>
                 {paginationError ? <Text style={styles.paginationError}>{paginationError}</Text> : null}
-                {hasMore ? (
+                {isLoadingMore ? (
+                  <ActivityIndicator
+                    accessibilityLabel="Cargando más productos"
+                    color={colors.text}
+                    size="small"
+                    style={styles.loadMoreIndicator}
+                  />
+                ) : null}
+                {hasMore && !isLoadingMore ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ disabled: isLoadingMore || isRefreshing }}
@@ -344,7 +352,7 @@ export default function ProductListScreen() {
                     ]}
                   >
                     <Text style={styles.loadMoreButtonText}>
-                      {isLoadingMore ? 'Cargando...' : paginationError ? 'Reintentar' : 'Cargar más'}
+                      {paginationError ? 'Reintentar' : 'Cargar más'}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -437,6 +445,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
     borderRadius: 999,
     justifyContent: 'center',
+    minHeight: 48,
+  },
+  loadMoreIndicator: {
     minHeight: 48,
   },
   loadMoreButtonPressed: {

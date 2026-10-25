@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
+import { ErrorMessage } from '@/components/error-message';
 import { FormHeader } from '@/components/form-header';
 import { ProductForm } from '@/components/product-form';
 import { colors } from '@/constants/colors';
@@ -17,38 +18,47 @@ function errorMessage(caught: unknown): string {
 export default function NewProductScreen() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const loadRequestId = useRef(0);
+
+  const loadCategories = useCallback(async () => {
+    const requestId = loadRequestId.current + 1;
+    loadRequestId.current = requestId;
+    setLoading(true);
+    setLoadError(null);
+
+    try {
+      const data = await getCategories();
+      if (requestId !== loadRequestId.current) return;
+      setCategories(data);
+    } catch (caught: unknown) {
+      if (requestId !== loadRequestId.current) return;
+      setLoadError(errorMessage(caught));
+    } finally {
+      if (requestId === loadRequestId.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    getCategories()
-      .then((data) => {
-        if (cancelled) return;
-        setError(null);
-        setCategories(data);
-      })
-      .catch((caught: unknown) => {
-        if (cancelled) return;
-        setError(errorMessage(caught));
-      });
-
+    void loadCategories();
     return () => {
-      cancelled = true;
+      loadRequestId.current += 1;
     };
-  }, []);
+  }, [loadCategories]);
 
   async function handleSubmit(input: ProductInput) {
     if (submitting) return;
     setSubmitting(true);
-    setError(null);
+    setSubmitError(null);
     try {
       await createProduct(input);
       router.back();
       Alert.alert('Producto guardado', 'El producto se creó correctamente.');
     } catch (caught: unknown) {
-      setError(errorMessage(caught));
+      setSubmitError(errorMessage(caught));
     } finally {
       setSubmitting(false);
     }
@@ -57,12 +67,26 @@ export default function NewProductScreen() {
   return (
     <View style={styles.container}>
       <FormHeader title="Nuevo producto" />
-      <ProductForm
-        categories={categories}
-        onSubmit={handleSubmit}
-        submitting={submitting}
-        error={error}
-      />
+      {loading ? (
+        <View style={styles.loader} accessibilityLabel="Cargando categorías">
+          <ActivityIndicator size="large" color={colors.text} />
+        </View>
+      ) : null}
+      {!loading && loadError ? (
+        <ErrorMessage
+          title="No pudimos cargar las categorías"
+          message={loadError}
+          onRetry={() => void loadCategories()}
+        />
+      ) : null}
+      {!loading && !loadError ? (
+        <ProductForm
+          categories={categories}
+          onSubmit={handleSubmit}
+          submitting={submitting}
+          error={submitError}
+        />
+      ) : null}
     </View>
   );
 }
@@ -71,5 +95,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
