@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorMessage } from '@/components/error-message';
 import ImageCarousel from '@/components/image-carousel';
 import { colors } from '@/constants/colors';
-import { hasGroupPrefix } from '@/constants/group';
+import { getDisplayTitle, hasGroupPrefix } from '@/constants/group';
 import { getProduct } from '@/services/products';
 import type { Product } from '@/types/product';
 
@@ -49,7 +49,7 @@ export default function ProductDetailScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Volver a productos" onPress={goBack} style={styles.iconButton}>
           <Text style={styles.backIcon}>‹</Text>
         </Pressable>
-        <Text numberOfLines={1} style={styles.headerTitle}>{product?.title ?? 'Detalle de producto'}</Text>
+        <Text numberOfLines={1} style={styles.headerTitle}>{product ? getDisplayTitle(product.title) : 'Detalle de producto'}</Text>
         <View style={styles.headerSpacer} />
       </View>
       {loading ? (
@@ -67,7 +67,7 @@ export default function ProductDetailScreen() {
             <ImageCarousel key={`${product.id}-${product.updatedAt}`} images={product.images} />
             <View style={styles.content}>
               <Text style={styles.price}>{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD' }).format(product.price)}</Text>
-              <Text style={styles.title}>{product.title}</Text>
+              <Text style={styles.title}>{getDisplayTitle(product.title)}</Text>
               <View style={styles.pills}>
                 <View style={styles.badge}><Text style={styles.badgeText}>{isMine ? 'Mío' : 'Sólo lectura'}</Text></View>
                 <Pressable accessibilityRole="button" onPress={viewCategory} style={styles.pill}><Text style={styles.pillText}>{product.category.name}</Text></Pressable>
@@ -122,4 +122,3 @@ const styles = StyleSheet.create({
   skeletonPrice: { width: 120, height: 32, borderRadius: 12, backgroundColor: colors.surface },
   skeletonTitle: { height: 24, borderRadius: 12, backgroundColor: colors.surface },
 });
-

@@ -54,3 +54,12 @@
 - Pendientes: revisar el detalle, que queda en blanco tanto desde
   Productos como desde Categorías, y adaptar los textos de los
   componentes compartidos para categorías.
+## Detalle de producto
+
+- Prompt: implementar la segunda pantalla de docs/ui-preview.html en feat/detail, respetar el diseño y mostrar el resultado para validar.
+- Implementación: consulta por id, refetch al recuperar foco, carrusel de URLs con placeholder, precio, categoría, descripción desplegable, skeleton y errores con Reintentar. Edición solo para títulos con el prefijo; los demás muestran Ver categoría. La baja queda en el formulario de edición existente.
+- Integración: se incorporó origin/main con lista, categorías y formulario del equipo. No se agregaron dependencias.
+- Qué falló: el import inicial de useFocusEffect desde @react-navigation/native no compila porque ese paquete no está instalado. Se aplicó la corrección ya documentada por el equipo para Expo Router 58: usar expo-router. AGENTS.md todavía conserva la indicación anterior.
+- Qué falló: el navegador integrado bloqueó abrir el HTML local mediante file://. Se leyó su código como referencia; la validación visual debe realizarse sobre la app ejecutándose.
+- Validación: ver el resultado de los chequeos en la entrega; la prueba en un teléfono con Expo Go debe completarse antes de abrir el PR.
+- Resultado: TypeScript pasó después de integrar main. Lint no se pudo completar: falta configuración y la preparación automática falló por conexión. Expo inició en localhost:8081, pero la automatización del navegador agotó el tiempo de espera; no se confirmó visualmente ni en Expo Go.
