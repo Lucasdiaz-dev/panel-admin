@@ -47,9 +47,9 @@ Capturas tomadas en iPhone con Expo Go.
 | ------------------------------------------------------------------ | ----------------------------------------------------------- |
 | ![Productos por categoría](docs/screenshots/category-products.jpg) | ![Detalle de producto](docs/screenshots/product-detail.png) |
 
-| 5. Alta                                             | 5. Edición                                            |
-| --------------------------------------------------- | ----------------------------------------------------- |
-| ![Nuevo producto](docs/screenshots/product-new.png) | ![Editar producto](docs/screenshots/product-edit.png) |
+| 5. Alta                                             | 5. Edición (varias URLs precargadas)                  | 5. Alta sin conexión                                                          |
+| --------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| ![Nuevo producto](docs/screenshots/product-new.png) | ![Editar producto](docs/screenshots/product-edit.png) | ![Alta sin conexión con Reintentar](docs/screenshots/product-new-no-connection.png) |
 
 ## Estructura de carpetas
 
@@ -79,6 +79,7 @@ Las pantallas no llaman a `fetch`: piden los datos a `services/`, que verifica `
 3. "Armá un único `ProductForm` para alta y edición. El form no muestra el prefijo; `services/` lo agrega en POST/PUT solo si falta. El body usa `ProductInput` con `categoryId`."
 4. "Hidratá las pills de categoría del formulario con `getCategories()` y el tipo `Category` de la API."
 5. "Agregá validación al formulario: título, precio numérico ≥ 0, descripción, categoría y al menos una URL, con el error debajo de cada campo. Después de guardar o eliminar mostrá un aviso y volvé a una pantalla coherente."
+6. "Reemplazá el input de imagen por una lista de URLs con '+ Agregar URL' (mínimo una, todas `https://`). Si fallan las categorías o el producto en alta/edición, mostrá `ErrorMessage` con Reintentar. Agregá `ActivityIndicator` al cargar, guardar, borrar y al pie de la lista."
 
 ### Errores de la IA y cómo los corregimos
 
@@ -89,5 +90,7 @@ Las pantallas no llaman a `fetch`: piden los datos a `services/`, que verifica `
 **3. Formulario sin validación.** El `ProductForm` generado mandaba el POST/PUT con campos vacíos o precio no numérico y dependía del 400 del servidor, cuando la consigna (R5) pide validar antes de enviar. Agregamos validación de título, precio, descripción, categoría y URL `https://`, con el mensaje debajo de cada campo.
 
 **4. Categorías sucias en el selector.** La IA mostró todas las categorías del endpoint público, que incluye decenas de nombres de prueba (`Electronics from Config-<uuid>`, sufijos aleatorios). Normalizamos los nombres, descartamos los de prueba y deduplicamos; el body sigue enviando `categoryId`.
+
+**5. Error de carga mezclado con el de guardado.** Alta y edición usaban un solo estado `error` para las dos cosas. Si fallaban las categorías, el mensaje quedaba al pie del formulario, sin Reintentar, y Guardar terminaba en "Elegí una categoría". Separamos los estados y, cuando falla la carga, se muestra `ErrorMessage` con un Reintentar que vuelve a pedir los datos.
 
 Más detalle de cada caso en [`docs/ia.md`](docs/ia.md).
