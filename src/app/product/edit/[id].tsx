@@ -121,7 +121,7 @@ export default function EditProductScreen() {
           initialTitle={product.title}
           initialPrice={product.price}
           initialDescription={product.description}
-          initialImageUrl={product.images[0]}
+          initialImages={product.images}
           initialCategoryId={product.category.id}
           error={error}
         />
